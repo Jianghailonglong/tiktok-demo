@@ -27,7 +27,7 @@ func RelationAction(c *gin.Context) {
 	}
 
 	if actionType == 1 {
-		if flag, _ := service.SubscribeUser(userId, toUserId); flag {
+		if err := service.SubscribeUser(userId, toUserId); nil == err {
 			c.JSON(http.StatusOK, common.Response{
 				StatusCode: 0,
 				StatusMsg:  "关注成功",
@@ -35,7 +35,7 @@ func RelationAction(c *gin.Context) {
 			return
 		}
 	} else if actionType == 2 {
-		if flag, _ := service.UnsubscribeUser(userId, toUserId); flag {
+		if err := service.UnsubscribeUser(userId, toUserId); nil == err {
 			c.JSON(http.StatusOK, common.Response{
 				StatusCode: 0,
 				StatusMsg:  "取消关注成功",

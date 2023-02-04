@@ -25,7 +25,7 @@ func GetRelation(userId int, toUserId int) (*Relation, error) {
 		Where("user_id = ?", userId).
 		Where("to_user_id = ?", toUserId).
 		Take(&relation).Error; nil != err {
-		logger.Log.Info(err.Error())
+		logger.Log.Error(err.Error())
 		return nil, err
 	}
 
@@ -33,21 +33,21 @@ func GetRelation(userId int, toUserId int) (*Relation, error) {
 }
 
 // 在原来的关系上修改关注关系
-func UpdateRelation(relation *Relation, action int) (bool, error) {
+func UpdateRelation(relation *Relation, action int) error {
 	// 更新失败，返回错误。
 	if err := db.Model(Relation{}).
 		Where("id = ?", relation.Id).
 		Update("subscribed", action).Error; nil != err {
 		// 更新失败，打印错误日志。
-		logger.Log.Info(err.Error())
-		return false, err
+		logger.Log.Error(err.Error())
+		return err
 	}
 	// 更新成功。
-	return true, nil
+	return nil
 }
 
 // 原表中没有关注记录，新增一条记录
-func AddRelation(userId int, toUserId int) (bool, error) {
+func AddRelation(userId int, toUserId int) error {
 	relation := Relation{
 		UserId:     userId,
 		ToUserId:   toUserId,
@@ -56,9 +56,9 @@ func AddRelation(userId int, toUserId int) (bool, error) {
 
 	// 插入失败，返回err.
 	if err := db.Select("UserId", "ToUserId", "Subscribed").Create(&relation).Error; nil != err {
-		logger.Log.Info(err.Error())
-		return false, err
+		logger.Log.Error(err.Error())
+		return err
 	}
 	// 插入成功
-	return true, nil
+	return nil
 }
