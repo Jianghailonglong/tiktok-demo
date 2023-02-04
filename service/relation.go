@@ -5,7 +5,7 @@ import (
 )
 
 // 关注用户
-func SubscribeUser(userId int, toUserId int) (bool, error) {
+func SubscribeUser(userId int, toUserId int)  error {
 	// 先看是否原有关注关系
 	relation, _ := mysql.GetRelation(userId, toUserId)
 
@@ -17,12 +17,12 @@ func SubscribeUser(userId int, toUserId int) (bool, error) {
 }
 
 // 取关用户
-func UnsubscribeUser(userId int, toUserId int) (bool, error) {
+func UnsubscribeUser(userId int, toUserId int) error {
 	// 先看是否原有关注关系
 	relation, _ := mysql.GetRelation(userId, toUserId)
 
 	if relation == nil {
-		return true, nil
+		return nil
 	}
 
 	return mysql.UpdateRelation(relation, mysql.UNSUBSCRIBED)
