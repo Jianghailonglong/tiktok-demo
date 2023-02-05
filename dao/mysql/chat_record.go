@@ -2,9 +2,7 @@ package mysql
 
 import (
 	"errors"
-	"fmt"
 	"sort"
-	"strconv"
 	"tiktok-demo/common"
 	"time"
 )
@@ -50,27 +48,43 @@ func GetChatRecordList(userId, toUserId int)(messageList []common.Message,err er
 	return messageList,nil
 }
 
+// func AppendRecordList(listA2B,listB2A []ChatRecord)(messageList []common.Message){
+// 	for _,l:=range listA2B{
+// 		msg:=common.Message{
+// 			Id: int64(l.SourceId),
+// 			Content: l.Content,
+// 			CreateTime: fmt.Sprint(l.CreateTime),
+// 		}
+// 		messageList=append(messageList, msg)
+// 	}
+// 	for _,l:=range listB2A{
+// 		msg:=common.Message{
+// 			Id: int64(l.SourceId),
+// 			Content: l.Content,
+// 			CreateTime: fmt.Sprint(l.CreateTime),
+// 		}
+// 		messageList=append(messageList, msg)
+// 	}
+// 	sort.Slice(messageList,func(i, j int) bool {
+// 		ti,_:=strconv.Atoi(messageList[i].CreateTime)
+// 		tj,_:=strconv.Atoi(messageList[j].CreateTime)
+// 		return ti<tj
+// 	})
+// 	return messageList
+// }
 func AppendRecordList(listA2B,listB2A []ChatRecord)(messageList []common.Message){
+	listA2B=append(listA2B, listB2A...)
+	sort.Slice(listA2B,func(i, j int) bool {
+		return listA2B[i].CreateTime<listA2B[j].CreateTime
+	})
 	for _,l:=range listA2B{
 		msg:=common.Message{
 			Id: int64(l.SourceId),
 			Content: l.Content,
-			CreateTime: fmt.Sprint(l.CreateTime),
+			CreateTime: time.Unix(int64(l.CreateTime),0).Format("2006-01-02 15:04:05"),
 		}
 		messageList=append(messageList, msg)
 	}
-	for _,l:=range listB2A{
-		msg:=common.Message{
-			Id: int64(l.SourceId),
-			Content: l.Content,
-			CreateTime: fmt.Sprint(l.CreateTime),
-		}
-		messageList=append(messageList, msg)
-	}
-	sort.Slice(messageList,func(i, j int) bool {
-		ti,_:=strconv.Atoi(messageList[i].CreateTime)
-		tj,_:=strconv.Atoi(messageList[j].CreateTime)
-		return ti<tj
-	})
+	
 	return messageList
 }
