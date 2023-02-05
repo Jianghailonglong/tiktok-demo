@@ -34,3 +34,15 @@ type VideoPublishListRequest struct {
 	Token  string `json:"token"`
 	UserId string `json:"user_id"`
 }
+
+type ChatMessageRequest struct {
+	Token      string `json:"token"`
+	ToUserId   string `json:"to_user_id"`
+	ActionType string `json:"action_type"`
+	Content    string `json:"content"`
+}
+
+type ChatHistoryRequest struct{
+	Token      string `json:"token"`
+	ToUserId   string `json:"to_user_id"`
+}

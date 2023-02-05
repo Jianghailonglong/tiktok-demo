@@ -56,7 +56,7 @@ type AuthConfig struct {
 
 func InitConfig() error {
 	// 根据文件位置修改
-	viper.SetConfigFile("/home/tiktok-demo/conf/config.yaml")
+	viper.SetConfigFile("C:/Users/hua'wei/Desktop/TT/BIG/tiktok-demo/conf/config.yaml")
 	viper.WatchConfig()
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		err := viper.Unmarshal(&Config)

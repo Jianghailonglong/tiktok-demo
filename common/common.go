@@ -25,8 +25,9 @@ type User struct {
 	IsFollow      bool   `json:"is_follow,omitempty"`
 }
 
+//聊天记录
 type Message struct {
-	Id         int64  `json:"id,omitempty"`
+	Id         int64  `json:"id,omitempty"` //消息发送方id
 	Content    string `json:"content,omitempty"`
 	CreateTime string `json:"create_time,omitempty"`
 }

@@ -7,6 +7,10 @@ import (
 )
 
 func InitRouters(r *gin.Engine) {
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200,"连接成功!")
+	})
+
 	apiRouter := r.Group("/douyin")
 
 	// basic apis
@@ -32,4 +36,12 @@ func InitRouters(r *gin.Engine) {
 	//apiRouter.GET("/relation/friend/list/", controller.FriendList)
 	//apiRouter.GET("/message/chat/", controller.MessageChat)
 	//apiRouter.POST("/message/action/", controller.MessageAction)
+
+	//聊天模块
+	chatApiRouter:=apiRouter.Group("/message")
+	chatApiRouter.Use(jwt.AuthInHeader())
+	{
+		chatApiRouter.POST("/action/",controller.SendMessage)
+		chatApiRouter.GET("/chat/",controller.ChatRecordList)
+	}
 }

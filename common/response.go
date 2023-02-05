@@ -30,3 +30,13 @@ type Response struct {
 	StatusCode int32  `json:"status_code"`
 	StatusMsg  string `json:"status_msg,omitempty"`
 }
+
+//发送消息请求的响应
+type ChatMessageResponse struct {
+	Response
+}
+//消息记录请求的响应
+type ChatHistoryResponse struct {
+	Response
+	MessageList []Message `json:"message_list"`
+}
