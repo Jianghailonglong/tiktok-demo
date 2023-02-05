@@ -1,3 +1,3 @@
 # tiktok-demo
 
-push试水
+push试水..
