@@ -2,6 +2,8 @@ package conf
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
@@ -55,8 +57,11 @@ type AuthConfig struct {
 }
 
 func InitConfig() error {
+
 	// 根据文件位置修改
-	viper.SetConfigFile("C:/Users/hua'wei/Desktop/TT/BIG/tiktok-demo/conf/config.yaml")
+	workDir, _ := os.Getwd()
+	viper.SetConfigFile(workDir + "/conf/config.yaml")
+
 	viper.WatchConfig()
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		err := viper.Unmarshal(&Config)
