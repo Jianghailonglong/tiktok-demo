@@ -2,10 +2,12 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
-	"tiktok-demo/common"
+	"tiktok-demo/dao/mysql"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -67,27 +69,39 @@ var Manager = ConnManager{
 	DisConnection: make(chan *SocketConn),
 }
 
+//gin 中间件无法在websocket中使用,只能另写专用中间件.
+//gin response无法传回websocket客户端,只能修改响应头.
 func WsChatHandler(c *gin.Context) {
+	token := c.Query("token")
+	jwtUid, err := jwt.WsAuthInHeader(token)
+	if err != nil {
+		c.Header("Error-code", fmt.Sprint(WsInvalidToken))
+		c.Header("Error-type", WsMsgFlags[WsInvalidToken])
+		return
+	}
 	uidRaw := c.Query("uid")
 	toUidRaw := c.Query("toUid")
 	uid, err := strconv.Atoi(uidRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, common.WsStartResponse{
-			Response: common.Response{
-				StatusCode: CodeQueryError,
-				StatusMsg:  MsgFlags[CodeQueryError],
-			},
-		})
+		c.Header("Error-code", fmt.Sprint(WsInvalidUid))
+		c.Header("Error-type", WsMsgFlags[WsInvalidUid])
+		return
+	}
+	if jwtUid != uid {
+		c.Header("Error-code", fmt.Sprint(WsUidMismatch))
+		c.Header("Error-type", WsMsgFlags[WsUidMismatch])
 		return
 	}
 	toUid, err := strconv.Atoi(toUidRaw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, common.WsStartResponse{
-			Response: common.Response{
-				StatusCode: CodeQueryError,
-				StatusMsg:  MsgFlags[CodeQueryError],
-			},
-		})
+		c.Header("Error-code", fmt.Sprint(WsInvalidToUid))
+		c.Header("Error-type", WsMsgFlags[WsInvalidToUid])
+		return
+	}
+	_,err=mysql.CheckUserExist(toUid)
+	if err != nil {
+		c.Header("Error-code", fmt.Sprint(WsToUidNotExist))
+		c.Header("Error-type", WsMsgFlags[WsToUidNotExist])
 		return
 	}
 	//升级为websocket连接
@@ -97,6 +111,8 @@ func WsChatHandler(c *gin.Context) {
 		},
 	}).Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		c.Header("Error-code", fmt.Sprint(WsUpgradeFail))
+		c.Header("Error-type", WsMsgFlags[WsUpgradeFail])
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
@@ -125,7 +141,7 @@ func (c *SocketConn) TCP2Messeger() {
 		msgData := new(C2SMsgData)
 		err := c.Conn.ReadJSON(&msgData)
 		if err != nil {
-			logger.Log.Sugar().Errorf("tcp报文json数据格式不正确, %v",err)
+			logger.Log.Sugar().Errorf("tcp报文json数据格式不正确, %v", err)
 			Manager.DisConnection <- c
 			_ = c.Conn.Close()
 			break
@@ -144,8 +160,8 @@ func (c *SocketConn) Messege2TCP() {
 		_ = c.Conn.Close()
 	}()
 	for {
-		select{
-		case msgContent,ok := <-c.MsgChan:
+		select {
+		case msgContent, ok := <-c.MsgChan:
 			if !ok {
 				_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
