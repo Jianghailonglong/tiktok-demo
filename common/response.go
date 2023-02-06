@@ -40,3 +40,8 @@ type ChatHistoryResponse struct {
 	Response
 	MessageList []Message `json:"message_list"`
 }
+//ws建立连接的响应
+type WsStartResponse struct{
+	Response
+}
+

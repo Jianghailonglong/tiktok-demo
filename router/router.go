@@ -43,5 +43,7 @@ func InitRouters(r *gin.Engine) {
 	{
 		chatApiRouter.POST("/action/",controller.SendMessage)
 		chatApiRouter.GET("/chat/",controller.ChatRecordList)
+		chatApiRouter.GET("/ws",controller.WsChatHandler)
 	}
+	r.GET("/ws",controller.WsChatHandler)
 }

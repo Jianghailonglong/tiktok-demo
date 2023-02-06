@@ -8,6 +8,7 @@ import (
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/logger"
 	"tiktok-demo/router"
+	"github.com/gin-contrib/pprof"
 )
 
 // 初始化项目所有依赖
@@ -42,6 +43,9 @@ func main() {
 	r := gin.New()
 	// 替换gin框架日志，自定义GinRecovery
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
+	pprof.Register(r)
+	//websocket监听
+	go controller.Manager.Start()
 	// 路由设置
 	router.InitRouters(r)
 	// 自定义修改端口
