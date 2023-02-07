@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 	"tiktok-demo/common"
 	"tiktok-demo/service"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -47,5 +47,54 @@ func RelationAction(c *gin.Context) {
 	c.JSON(http.StatusOK, common.Response{
 		StatusCode: -1,
 		StatusMsg:  "服务器内部错误",
+	})
+}
+
+// /follow/list 获取关注列表
+func FollowList(c *gin.Context) {
+	userId := c.GetInt(ContextUserIDKey)
+
+	if followList, err := service.GetFollowList(int64(userId)); nil == err {
+		c.JSON(http.StatusOK, common.FollowListResponse{
+			Response: common.Response{
+				StatusCode: 0,
+				StatusMsg:  "获取关注列表成功",
+			},
+			UserList: followList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, common.FollowListResponse{
+		Response: common.Response{
+			StatusCode: -1,
+			StatusMsg:  "获取关注列表失败",
+		},
+		UserList: nil,
+	})
+
+}
+
+// FollowerList 获取粉丝列表
+func FollowerList(c *gin.Context) {
+	userId := c.GetInt(ContextUserIDKey)
+
+	if followerList, err := service.GetFollowerList(int64(userId)); nil == err {
+		c.JSON(http.StatusOK, common.FollowerListResponse{
+			Response: common.Response{
+				StatusCode: 0,
+				StatusMsg:  "获取粉丝列表成功",
+			},
+			UserList: followerList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, common.FollowerListResponse{
+		Response: common.Response{
+			StatusCode: -1,
+			StatusMsg:  "获取粉丝列表失败",
+		},
+		UserList: nil,
 	})
 }
