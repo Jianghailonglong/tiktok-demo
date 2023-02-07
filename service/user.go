@@ -11,13 +11,8 @@ import (
 // Register 注册用户
 func Register(username, password string) (mysql.User, string, error) {
 	// 1、判断username是否存在，不存在返回true
-	if isExisted, err := checkUserExist(username); err != nil {
-		logger.Log.Error(err.Error())
-		return mysql.User{}, "", err
-	} else {
-		if isExisted {
-			return mysql.User{}, "", UserExistError
-		}
+	if isExisted := checkUserExist(username); isExisted {
+		return mysql.User{}, "", UserExistError
 	}
 	// 2、插入用户和加密的密码
 	user, err := insertUser(username, password)
@@ -35,15 +30,14 @@ func Register(username, password string) (mysql.User, string, error) {
 }
 
 // checkUserExist 判断用户是否存在
-func checkUserExist(username string) (bool, error) {
-	user, err := mysql.GetUserByUserName(username)
+func checkUserExist(username string) bool {
+	_, err := mysql.GetUserByUserName(username)
 	if err != nil {
-		return false, err
+		if err.Error() == "查不到该用户" {
+			return false
+		}
 	}
-	if user != (mysql.User{}) {
-		return true, nil
-	}
-	return false, nil
+	return true
 }
 
 // insertUser 插入新用户
