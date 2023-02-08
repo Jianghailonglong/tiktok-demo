@@ -2,12 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"tiktok-demo/conf"
 	"tiktok-demo/controller"
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/snowflake"
 	"tiktok-demo/router"
+	"tiktok-demo/service"
 )
 
 // 初始化项目所有依赖
@@ -25,6 +28,14 @@ func initDependencies() error {
 		return err
 	}
 	err = controller.InitTrans("en")
+	if err != nil {
+		return err
+	}
+	err = service.InitMinio()
+	if err != nil {
+		return err
+	}
+	err = snowflake.InitSonyFlake(uint16(conf.Config.MachineID))
 	return err
 }
 
@@ -44,6 +55,7 @@ func main() {
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
 	// 路由设置
 	router.InitRouters(r)
+	pprof.Register(r)
 	// 自定义修改端口
 	err = r.Run(":8000")
 	if err != nil {

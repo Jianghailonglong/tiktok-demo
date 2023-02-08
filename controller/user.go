@@ -28,7 +28,6 @@ func Register(c *gin.Context) {
 		})
 		return
 	}
-
 	if user, token, err := service.Register(username, password); err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.UserResponse{
@@ -68,7 +67,6 @@ func Login(c *gin.Context) {
 		})
 		return
 	}
-
 	// 检查登录信息是否正确
 	if user, token, err := service.Login(username, password); err != nil {
 		c.JSON(http.StatusOK, common.UserResponse{

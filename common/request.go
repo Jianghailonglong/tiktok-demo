@@ -18,8 +18,8 @@ type UserInfoRequest struct {
 
 // FeedRequest 视频流请求内容，Param
 type FeedRequest struct {
-	LatestTime string `json:"latest_time"`
-	Token      string `json:"token"`
+	LatestTime string `json:"latest_time,omitempty"`
+	Token      string `json:"token,omitempty"`
 }
 
 // PublishVideoRequest 发布视频请求内容，Body

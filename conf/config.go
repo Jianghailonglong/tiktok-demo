@@ -21,6 +21,7 @@ type AppConfig struct {
 	*MySQLConfig `mapstructure:"mysql"`
 	*RedisConfig `mapstructure:"redis"`
 	*AuthConfig  `mapstructure:"auth"`
+	*MinioConfig `mapstructure:"minio"`
 }
 
 type MySQLConfig struct {
@@ -54,6 +55,21 @@ type LogConfig struct {
 type AuthConfig struct {
 	JwtExpire int    `mapstructure:"jwt_expire"`
 	JwtSecret string `mapstructure:"jwt_secret"`
+}
+
+type MinioConfig struct {
+	EndPoint        string            `mapstructure:"endpoint"`
+	AccessKeyID     string            `mapstructure:"access_key_id"`
+	SecretAccessKey string            `mapstructure:"secret_access_key"`
+	UseSsL          bool              `mapstructure:"use_ssL"`
+	Video           MinioBucketConfig `mapstructure:"video"`
+	Image           MinioBucketConfig `mapstructure:"image"`
+}
+
+type MinioBucketConfig struct {
+	BucketName  string `mapstructure:"bucket_name"`
+	ContentType string `mapstructure:"content_type"`
+	URL         string `mapstructure:"url"`
 }
 
 func InitConfig() error {
