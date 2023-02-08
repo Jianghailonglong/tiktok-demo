@@ -36,5 +36,6 @@ func GetChatRecordList(userId int, toUserIdRaw string)(messageList []common.Mess
 		return []common.Message{},err
 	}
 	messageList,err=mysql.GetChatRecordList(userId,toUserId)
+
 	return messageList,err
 }
