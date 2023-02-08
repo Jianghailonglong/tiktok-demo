@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SendMessage(c *gin.Context) {
+func MessageAction(c *gin.Context) {
 	// token := c.Query("token")
 	toUserId := c.Query("to_user_id")
 	actionType := c.Query("action_type")
@@ -53,7 +53,7 @@ func SendMessage(c *gin.Context) {
 	}
 
 }
-func ChatRecordList(c *gin.Context) {
+func MessageChat(c *gin.Context) {
 	token:=c.Query("token")
 	toUserId:=c.Query("to_user_id")
 	chatHistoryRequest:=&common.ChatHistoryRequest{

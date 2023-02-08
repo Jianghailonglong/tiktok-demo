@@ -34,20 +34,12 @@ func InitRouters(r *gin.Engine) {
 	//apiRouter.GET("/relation/follow/list/", controller.FollowList)
 	//apiRouter.GET("/relation/follower/list/", controller.FollowerList)
 	//apiRouter.GET("/relation/friend/list/", controller.FriendList)
-	//apiRouter.GET("/message/chat/", controller.MessageChat)
-	//apiRouter.POST("/message/action/", controller.MessageAction)
+	apiRouter.GET("/message/chat/",jwt.AuthInHeader() ,controller.MessageChat)
+	apiRouter.POST("/message/action/",jwt.AuthInHeader() ,controller.MessageAction)
 
 	
 	//聊天模块(方案一:websocket)
 	//websocket不能够使用gin的中间件 T_T
 	//所以要自己实现鉴权
 	r.GET("/douyin/chat/ws",controller.WsChatHandler)
-	
-	//聊天模块(方案二:http轮询)
-	chatApiRouter:=apiRouter.Group("/message")
-	chatApiRouter.Use(jwt.AuthInHeader())
-	{
-		chatApiRouter.POST("/action/",controller.SendMessage)
-		chatApiRouter.GET("/chat/",controller.ChatRecordList)
-	}
 }
