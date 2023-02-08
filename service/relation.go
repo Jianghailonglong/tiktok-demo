@@ -4,6 +4,12 @@ import (
 	"sync"
 	"tiktok-demo/common"
 	"tiktok-demo/dao/mysql"
+	"tiktok-demo/logger"
+)
+
+const (
+	FOLLOW   = 1 // 获取关注列表
+	FOLLOWER = 2 // 获取粉丝列表
 )
 
 // 关注用户
@@ -47,8 +53,8 @@ func GetFollowerList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetInfoById(idList[i]); nil == err {
-				user.IsFollow, _ = mysql.IsFollow(userId, user.Id)
+			if user, err := GetInfoById(idList[i], userId, FOLLOWER); nil == err {
+
 				followedList[i] = user
 			}
 		}(i)
@@ -75,8 +81,8 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetInfoById(idList[i]); nil == err {
-				user.IsFollow, _ = mysql.IsFollow(user.Id, userId)
+			if user, err := GetInfoById(idList[i], userId, FOLLOW); nil == err {
+
 				followList[i] = user
 			}
 		}(i)
@@ -86,18 +92,12 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	return followList, nil
 }
 
-// 根据id获取单个用户的所有信息
-func GetInfoById(userId int64) (common.User, error) {
-	user, err := mysql.GetUserByUserID(userId)
+// 根据id获取单个用户的所有信息, relationType= 1代表关注列表 2代表粉丝列表
+func GetInfoById(userId int64, withUserId int64, relationType int) (common.User, error) {
+	user, err := mysql.GetInfoById(userId, withUserId, relationType)
 	if nil != err {
-		return common.User{}, err
+		logger.Log.Error(err.Error())
+		return user, err
 	}
-
-	var retUser common.User
-	retUser.Id = int64(user.Id)
-	retUser.Name = user.Username
-	retUser.FollowCount, _ = mysql.GetFollowCnt(retUser.Id)
-	retUser.FollowerCount, _ = mysql.GetFollowerCnt(retUser.Id)
-
-	return retUser, nil
+	return user, nil
 }

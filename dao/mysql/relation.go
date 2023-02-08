@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"tiktok-demo/common"
 	"tiktok-demo/logger"
 )
 
@@ -142,4 +143,29 @@ func IsFollow(userAId int64, userBId int64) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// 通过id获取关注者或者被关注者的信息 userId: 需要查询用户的id;
+func GetInfoById(userId int64, withUserId int64, relationType int) (common.User, error) {
+	user := common.User{}
+
+	// relationType= 1代表关注列表 2代表粉丝列表
+	switch relationType {
+	case 1:
+		if err := db.Table("users u").
+			Select("u.id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, (SELECT EXISTS (SELECT 1 FROM relations WHERE user_id = u.id AND to_user_id = ? AND subscribed = 1)) AS IsFollow", SUBSCRIBED, SUBSCRIBED, withUserId).
+			Where("u.id = ?", userId).Scan(&user).Error; nil != err {
+
+			return user, err
+		}
+	case 2:
+		if err := db.Table("users u").
+			Select("u.id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, (SELECT EXISTS (SELECT 1 FROM relations WHERE user_id = ? AND to_user_id = u.id AND subscribed = 1)) AS IsFollow", SUBSCRIBED, SUBSCRIBED, withUserId).
+			Where("u.id = ?", userId).Scan(&user).Error; nil != err {
+
+			return user, err
+		}
+	}
+
+	return user, nil
 }
