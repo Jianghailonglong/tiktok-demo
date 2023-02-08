@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 	"tiktok-demo/common"
 	"tiktok-demo/service"
-	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -20,8 +20,8 @@ func RelationAction(c *gin.Context) {
 	actionType, err2 := strconv.Atoi(c.Query("action_type"))
 	if (err1 != nil || err2 != nil) || (actionType != 1 && actionType != 2) {
 		c.JSON(http.StatusOK, common.Response{
-			StatusCode: -1,
-			StatusMsg:  "关注参数错误",
+			StatusCode: CodeInvalidParams,
+			StatusMsg:  MsgFlags[CodeInvalidParams],
 		})
 		return
 	}
@@ -29,23 +29,72 @@ func RelationAction(c *gin.Context) {
 	if actionType == 1 {
 		if err := service.SubscribeUser(userId, toUserId); nil == err {
 			c.JSON(http.StatusOK, common.Response{
-				StatusCode: 0,
-				StatusMsg:  "关注成功",
+				StatusCode: CodeSuccess,
+				StatusMsg:  MsgFlags[CodeSuccess],
 			})
 			return
 		}
 	} else if actionType == 2 {
 		if err := service.UnsubscribeUser(userId, toUserId); nil == err {
 			c.JSON(http.StatusOK, common.Response{
-				StatusCode: 0,
-				StatusMsg:  "取消关注成功",
+				StatusCode: CodeSuccess,
+				StatusMsg:  MsgFlags[CodeSuccess],
 			})
 			return
 		}
 	}
 
 	c.JSON(http.StatusOK, common.Response{
-		StatusCode: -1,
-		StatusMsg:  "服务器内部错误",
+		StatusCode: CodeServerBusy,
+		StatusMsg:  MsgFlags[CodeServerBusy],
+	})
+}
+
+// /follow/list 获取关注列表
+func FollowList(c *gin.Context) {
+	userId := c.GetInt(ContextUserIDKey)
+
+	if followList, err := service.GetFollowList(int64(userId)); nil == err {
+		c.JSON(http.StatusOK, common.FollowListResponse{
+			Response: common.Response{
+				StatusCode: CodeSuccess,
+				StatusMsg:  MsgFlags[CodeSuccess],
+			},
+			UserList: followList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, common.FollowListResponse{
+		Response: common.Response{
+			StatusCode: CodeServerBusy,
+			StatusMsg:  MsgFlags[CodeServerBusy],
+		},
+		UserList: nil,
+	})
+
+}
+
+// FollowerList 获取粉丝列表
+func FollowerList(c *gin.Context) {
+	userId := c.GetInt(ContextUserIDKey)
+
+	if followerList, err := service.GetFollowerList(int64(userId)); nil == err {
+		c.JSON(http.StatusOK, common.FollowerListResponse{
+			Response: common.Response{
+				StatusCode: CodeSuccess,
+				StatusMsg:  MsgFlags[CodeSuccess],
+			},
+			UserList: followerList,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, common.FollowerListResponse{
+		Response: common.Response{
+			StatusCode: CodeServerBusy,
+			StatusMsg:  MsgFlags[CodeServerBusy],
+		},
+		UserList: nil,
 	})
 }
