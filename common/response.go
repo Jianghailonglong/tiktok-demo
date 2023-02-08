@@ -30,3 +30,15 @@ type Response struct {
 	StatusCode int32  `json:"status_code"`
 	StatusMsg  string `json:"status_msg,omitempty"`
 }
+
+// FollowerListResponse 获取粉丝列表响应内容
+type FollowerListResponse struct {
+	Response
+	UserList []User `json:"user_list"`
+}
+
+// FollowListResponse 获取关注列表响应内容
+type FollowListResponse struct {
+	Response
+	UserList []User `json:"user_list"`
+}
