@@ -20,15 +20,15 @@ func InitRouters(r *gin.Engine) {
 	apiRouter.GET("/publish/list/", jwt.AuthInHeader(), controller.PublishList)
 
 	// extra apis - I
-	//apiRouter.POST("/favorite/action/", controller.FavoriteAction)
-	//apiRouter.GET("/favorite/list/", controller.FavoriteList)
-	//apiRouter.POST("/comment/action/", controller.CommentAction)
-	//apiRouter.GET("/comment/list/", controller.CommentList)
+	apiRouter.POST("/favorite/action/", jwt.AuthInHeader(), controller.FavoriteAction)
+	apiRouter.GET("/favorite/list/", jwt.AuthWithoutLimitLoginStatus(), controller.FavoriteList)
+	apiRouter.POST("/comment/action/", jwt.AuthInHeader(), controller.CommentAction)
+	apiRouter.GET("/comment/list/", jwt.AuthInHeader(), controller.CommentList)
 
 	// extra apis - II
 	apiRouter.POST("/relation/action/", jwt.AuthInHeader(), controller.RelationAction)
-	apiRouter.GET("/relation/follow/list/", jwt.AuthInHeader(), controller.FollowList)
-	apiRouter.GET("/relation/follower/list/", jwt.AuthInHeader(), controller.FollowerList)
+	apiRouter.GET("/relation/follow/list/", jwt.AuthWithoutLimitLoginStatus(), controller.FollowList)
+	apiRouter.GET("/relation/follower/list/", jwt.AuthWithoutLimitLoginStatus(), controller.FollowerList)
 	//apiRouter.GET("/relation/friend/list/", controller.FriendList)
 	//apiRouter.GET("/message/chat/", controller.MessageChat)
 	//apiRouter.POST("/message/action/", controller.MessageAction)

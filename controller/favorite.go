@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"strconv"
 	"tiktok-demo/common"
+	"tiktok-demo/middleware/jwt"
 	"tiktok-demo/service"
 )
 
-// 点赞视频方法
-func Favorite(c *gin.Context) {
-	getUserId, _ := c.Get("user_id")
-	var userId uint
-	if v, ok := getUserId.(uint); ok {
+// FavoriteAction 点赞视频方法
+func FavoriteAction(c *gin.Context) {
+	getUserId, _ := c.Get(jwt.ContextUserIDKey)
+	var userId int
+	if v, ok := getUserId.(int); ok {
 		userId = v
 	}
 
@@ -21,7 +22,7 @@ func Favorite(c *gin.Context) {
 	videoIdStr := c.Query("video_id")
 	videoId, _ := strconv.ParseInt(videoIdStr, 10, 10)
 
-	err := service.FavoriteAction(userId, uint(videoId), uint(actionType))
+	err := service.FavoriteAction(userId, int(videoId), int(actionType))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, common.Response{
 			StatusCode: 1,
@@ -35,54 +36,21 @@ func Favorite(c *gin.Context) {
 	}
 }
 
-// 获取列表方法
+// FavoriteList 获取喜欢视频列表方法
 func FavoriteList(c *gin.Context) {
-	getUserId, _ := c.Get("user_id")
-	var userIdHost int
-	if v, ok := getUserId.(int); ok {
-		userIdHost = v
-	}
-	userIdStr := c.Query("user_id")
-	userId, _ := strconv.ParseUint(userIdStr, 10, 10)
-	userIdNew := int(userId)
-	if userIdNew == 0 {
-		userIdNew = userIdHost
+	userIDRaw := c.Query("user_id")
+	userID, err := strconv.ParseInt(userIDRaw, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusOK, common.FavoriteListResponse{
+			Response: common.Response{
+				StatusCode: CodeInvalidParams,
+				StatusMsg:  MsgFlags[CodeInvalidParams],
+			},
+		})
+		return
 	}
 
-	videoList, err := service.FavoriteList(userIdNew)
-	videoListNew := make([]common.FavoriteVideo, 0)
-	for _, m := range videoList {
-		var author = common.User{}
-		var getAuthor = common.User{}
-		getAuthor, err := service.GetUser(int(m.AuthorId))
-		if err != nil {
-			c.JSON(http.StatusOK, common.Response{
-				StatusCode: 403,
-				StatusMsg:  "找不到作者！",
-			})
-			c.Abort()
-			return
-		}
-		isfollowing := service.IsFollowing(userIdHost, uint(m.AuthorId)) //参数类型、错误处理
-		isfavorite := service.CheckFavorite(userIdHost, int(m.ID))
-
-		author.Id = getAuthor.Id
-		author.Name = getAuthor.Name
-		author.FollowCount = getAuthor.FollowCount
-		author.FollowerCount = getAuthor.FollowerCount
-		author.IsFollow = isfollowing
-		var video = common.FavoriteVideo{}
-		video.Id = int64(m.ID)
-		video.Author = author
-		video.PlayUrl = m.PlayUrl
-		video.CoverUrl = m.CoverUrl
-		video.FavoriteCount = m.FavoriteCount
-		video.CommentCount = m.CommentCount
-		video.IsFavorite = isfavorite
-		video.Title = m.Title
-
-		videoListNew = append(videoListNew, video)
-	}
+	favoriteListResponse, err := service.FavoriteList(int(userID))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, common.FavoriteListResponse{
@@ -93,12 +61,10 @@ func FavoriteList(c *gin.Context) {
 			VideoList: nil,
 		})
 	} else {
-		c.JSON(http.StatusOK, common.FavoriteListResponse{
-			Response: common.Response{
-				StatusCode: 0,
-				StatusMsg:  "已找到列表！",
-			},
-			VideoList: videoListNew,
-		})
+		favoriteListResponse.Response = common.Response{
+			StatusCode: 0,
+			StatusMsg:  "已找到列表！",
+		}
+		c.JSON(http.StatusOK, favoriteListResponse)
 	}
 }

@@ -9,19 +9,12 @@ import (
 )
 
 type Video struct {
-	Id            int    `gorm:"column:id"`
-	AuthorId      int    `gorm:"column:author_id"`
-	PlayUrl       string `gorm:"column:play_url"`
-	CoverUrl      string `gorm:"column:cover_url"`
-	Title         string `gorm:"column:title"`
-	PublishTime   int64  `gorm:"column:publish_time"`
-	FavoriteCount int    `gorm:"column:favorite_count"`
-	CommentCount  int    `gorm:"column:comment_count"`
-}
-
-type VideoAndAuthor struct {
-	Video
-	User
+	Id          int    `gorm:"column:id"`
+	AuthorId    int    `gorm:"column:author_id"`
+	PlayUrl     string `gorm:"column:play_url"`
+	CoverUrl    string `gorm:"column:cover_url"`
+	Title       string `gorm:"column:title"`
+	PublishTime int64  `gorm:"column:publish_time"`
 }
 
 func (Video) TableName() string {
@@ -29,17 +22,17 @@ func (Video) TableName() string {
 }
 
 // GetFeed 获取视频流
-func GetFeed(latestTimeRaw string) (videoAndAuthors []VideoAndAuthor, err error) {
+func GetFeed(latestTimeRaw string) (videos []Video, err error) {
 	latestTime, err := strconv.ParseInt(latestTimeRaw, 10, 64)
 	if err != nil {
 		logger.Log.Error("strconv.ParseInt failed")
 		return
 	}
-	res := db.Table("videos").Joins("left join users on videos.author_id = users.id").Order("publish_time desc").
-		Where("publish_time <= ?", latestTime).Limit(30).Scan(&videoAndAuthors)
+	res := db.Table("videos").Order("publish_time desc").
+		Where("publish_time <= ?", latestTime).Limit(30).Scan(&videos)
 	if res.Error != nil {
 		logger.Log.Error("GetFeed获取视频流失败")
-		return videoAndAuthors, res.Error
+		return videos, res.Error
 	}
 	return
 }

@@ -36,38 +36,87 @@ func InitMinio() error {
 }
 
 // GetFeed 获取视频流
-func GetFeed(latestTime string, userID int) (feedResponse *common.FeedResponse, err error) {
-	// 1、获取视频流以及各个视频作者的信息
-	videoAndAuthors, err := mysql.GetFeed(latestTime)
+func GetFeed(latestTime string, userId int) (feedResponse *common.FeedResponse, err error) {
+	// 1、获取视频流
+	videoList, err := mysql.GetFeed(latestTime)
 	if err != nil {
 		return
 	}
-	// 2、TODO 作者的粉丝数，关注数，是否被关注
-	// 3、TODO 视频的点赞数，评论数，是否被点赞
-	feedResponse = assembleFeed(videoAndAuthors)
+	size := len(videoList)
+	var wg sync.WaitGroup
+	wg.Add(size * 4)
+	// 2、获取用户信息
+	resUsers := make([]common.User, size)
+
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if user, err := GetCommonUserInfoById(int64(userId), int64(videoList[i].AuthorId)); nil == err {
+				resUsers[i] = user
+			} else {
+				logger.Log.Error("获取用户信息失败")
+			}
+		}(i)
+	}
+	// 3、获取视频点赞数
+	videoLikeCntsList := make([]int, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if cnt, err := mysql.GetFavoriteCount(videoList[i].Id); nil == err {
+				videoLikeCntsList[i] = int(cnt)
+			} else {
+				logger.Log.Error("获取点赞次数失败")
+			}
+		}(i)
+	}
+	// 4、获取视频评论数
+	videoCommentCntsList := make([]int, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if cnt, err := mysql.GetCommentCount(videoList[i].Id); nil == err {
+				videoCommentCntsList[i] = int(cnt)
+			} else {
+				logger.Log.Error("获取评论次数失败")
+			}
+		}(i)
+	}
+	// 5、用户是否点赞视频
+	isFavoriteVideoList := make([]bool, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if isFavorite := mysql.CheckFavorite(userId, videoList[i].Id); nil == err {
+				isFavoriteVideoList[i] = isFavorite
+			} else {
+				logger.Log.Error("获取点赞关系失败")
+			}
+		}(i)
+	}
+	wg.Wait()
+	feedResponse = assembleFeed(videoList, resUsers, videoLikeCntsList, videoCommentCntsList, isFavoriteVideoList)
 	return
 }
 
 // assembleFeed 组装视频流信息
-func assembleFeed(videoAndAuthors []mysql.VideoAndAuthor) (feedResponse *common.FeedResponse) {
+func assembleFeed(videos []mysql.Video, resUsers []common.User, videoLikeCntsList []int,
+	videoCommentCntsList []int, isFavoriteVideoList []bool) (feedResponse *common.FeedResponse) {
 	feedResponse = new(common.FeedResponse)
-	feedResponse.VideoList = make([]common.Video, len(videoAndAuthors))
-	for i := 0; i < len(videoAndAuthors); i++ {
-		feedResponse.VideoList[i].Id = int64(videoAndAuthors[i].Video.Id)
-		feedResponse.VideoList[i].PlayUrl = videoAndAuthors[i].PlayUrl
-		feedResponse.VideoList[i].CoverUrl = videoAndAuthors[i].CoverUrl
-		feedResponse.VideoList[i].CommentCount = int64(videoAndAuthors[i].CommentCount)
-		feedResponse.VideoList[i].FavoriteCount = int64(videoAndAuthors[i].FavoriteCount)
-		feedResponse.VideoList[i].Title = videoAndAuthors[i].Title
-		feedResponse.VideoList[i].Author = common.User{
-			Id:   int64(videoAndAuthors[i].User.Id),
-			Name: videoAndAuthors[i].Username,
-			// TODO FollowCount FollowerCount IsFollow
-		}
+	feedResponse.VideoList = make([]common.Video, len(videos))
+	for i := 0; i < len(videos); i++ {
+		feedResponse.VideoList[i].Id = int64(videos[i].Id)
+		feedResponse.VideoList[i].PlayUrl = videos[i].PlayUrl
+		feedResponse.VideoList[i].CoverUrl = videos[i].CoverUrl
+		feedResponse.VideoList[i].Title = videos[i].Title
+		feedResponse.VideoList[i].Author = resUsers[i]
+		feedResponse.VideoList[i].FavoriteCount = int64(videoLikeCntsList[i])
+		feedResponse.VideoList[i].CommentCount = int64(videoCommentCntsList[i])
+		feedResponse.VideoList[i].IsFavorite = isFavoriteVideoList[i]
 	}
 	// 更新为最早发布视频的时间
-	if len(videoAndAuthors) > 0 {
-		feedResponse.NextTime = videoAndAuthors[len(videoAndAuthors)-1].PublishTime
+	if len(videos) > 0 {
+		feedResponse.NextTime = videos[len(videos)-1].PublishTime
 	}
 	return
 }
@@ -210,40 +259,76 @@ func genImageBytes() *bytes.Buffer {
 	return &b
 }
 
-// PublishList 通过userID获取发布的全部视频
-func PublishList(userID int64) (videoPublishListResponse *common.VideoPublishListResponse, err error) {
+// PublishList 通过userId获取发布的全部视频
+func PublishList(userId int64) (videoPublishListResponse *common.VideoPublishListResponse, err error) {
 	// 1、获取userID发布的视频
-	videos, err := mysql.GetVideoListByUserID(userID)
+	videos, err := mysql.GetVideoListByUserID(userId)
 	if err != nil {
 		return
 	}
 	// 2、获取视频的作者，唯一作者
-	videoAuthor, err := mysql.GetUserByUserID(userID)
+	author, err := mysql.GetInfoById(userId, userId)
 	if err != nil {
 		return
 	}
-	// 3、TODO 作者的粉丝数，关注数，是否被关注
-	// 4、TODO 视频的点赞数，评论数，是否被点赞
-	videoPublishListResponse = assemblePublishList(videos, videoAuthor)
+	// 3、获取视频点赞数
+	size := len(videos)
+	var wg sync.WaitGroup
+	wg.Add(size * 3)
+
+	videoLikeCntsList := make([]int, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if cnt, err := mysql.GetFavoriteCount(videos[i].Id); nil == err {
+				videoLikeCntsList[i] = int(cnt)
+			} else {
+				logger.Log.Error("获取点赞次数失败")
+			}
+		}(i)
+	}
+	// 4、获取视频评论数
+	videoCommentCntsList := make([]int, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if cnt, err := mysql.GetCommentCount(videos[i].Id); nil == err {
+				videoCommentCntsList[i] = int(cnt)
+			} else {
+				logger.Log.Error("获取评论次数失败")
+			}
+		}(i)
+	}
+	// 5、用户是否点赞视频
+	isFavoriteVideoList := make([]bool, size)
+	for i := 0; i < size; i++ {
+		go func(i int) {
+			defer wg.Done()
+			if isFavorite := mysql.CheckFavorite(int(userId), videos[i].Id); nil == err {
+				isFavoriteVideoList[i] = isFavorite
+			} else {
+				logger.Log.Error("获取点赞关系失败")
+			}
+		}(i)
+	}
+	wg.Wait()
+	videoPublishListResponse = assemblePublishList(videos, author, videoLikeCntsList, videoCommentCntsList, isFavoriteVideoList)
 	return
 }
 
-func assemblePublishList(videos []mysql.Video, videoAuthor mysql.User) (videoPublishListResponse *common.VideoPublishListResponse) {
+func assemblePublishList(videos []mysql.Video, author common.User, videoLikeCntsList []int,
+	videoCommentCntsList []int, isFavoriteVideoList []bool) (videoPublishListResponse *common.VideoPublishListResponse) {
 	videoPublishListResponse = new(common.VideoPublishListResponse)
 	videoPublishListResponse.VideoList = make([]common.Video, len(videos))
 	for i := 0; i < len(videos); i++ {
 		videoPublishListResponse.VideoList[i].Id = int64(videos[i].Id)
 		videoPublishListResponse.VideoList[i].PlayUrl = videos[i].PlayUrl
 		videoPublishListResponse.VideoList[i].CoverUrl = videos[i].CoverUrl
-		videoPublishListResponse.VideoList[i].CommentCount = int64(videos[i].CommentCount)
-		videoPublishListResponse.VideoList[i].FavoriteCount = int64(videos[i].FavoriteCount)
 		videoPublishListResponse.VideoList[i].Title = videos[i].Title
-
-		videoPublishListResponse.VideoList[i].Author = common.User{
-			Id:   int64(videoAuthor.Id),
-			Name: videoAuthor.Username,
-			// TODO FollowCount FollowerCount IsFollow
-		}
+		videoPublishListResponse.VideoList[i].Author = author
+		videoPublishListResponse.VideoList[i].FavoriteCount = int64(videoLikeCntsList[i])
+		videoPublishListResponse.VideoList[i].CommentCount = int64(videoCommentCntsList[i])
+		videoPublishListResponse.VideoList[i].IsFavorite = isFavoriteVideoList[i]
 	}
 	return
 }

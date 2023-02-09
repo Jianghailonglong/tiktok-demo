@@ -2,22 +2,25 @@ package mysql
 
 import (
 	"gorm.io/gorm"
-	"tiktok-demo/common"
+	"tiktok-demo/logger"
+)
+
+const (
+	FAVORITED   = 1
+	UNFAVORITED = 0
 )
 
 type Favorite struct {
-	gorm.Model
-	UserId  int64 `json:"user_id"`
-	VideoId int64 `json:"video_id"`
-	State   int64
+	Id         int `gorm:"column:id"`
+	UserId     int `gorm:"user_id"`
+	VideoId    int `gorm:"video_id"`
+	IsFavorite int `gorm:"is_favorite"`
 }
 
-// 查询某用户是否点赞某视频
+// CheckFavorite 查询某用户是否点赞某视频
 func CheckFavorite(uid int, vid int) bool {
 	var total int64
-	err := db.Table("favorites").
-		Where("user_id = ? AND video_id = ? AND state = 1", uid, vid).Count(&total).
-		Error
+	err := db.Table("favorites").Where("user_id = ? AND video_id = ? AND is_favorite = 1", uid, vid).Count(&total).Error
 	if err == gorm.ErrRecordNotFound {
 		return false //关注不存在
 	}
@@ -27,54 +30,16 @@ func CheckFavorite(uid int, vid int) bool {
 	return true
 }
 
-// 增加total_favorited
-func AddTotalFavorited(HostId int) error {
-	if err := db.Model(&common.User{}).
-		Where("id=?", HostId).
-		Update("total_favorited", gorm.Expr("total_favorited+?", 1)).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
-// 减少total_favorited
-func ReduceTotalFavorited(HostId int) error {
-	if err := db.Model(&common.User{}).
-		Where("id=?", HostId).
-		Update("total_favorited", gorm.Expr("total_favorited-?", 1)).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
-// 增加favorite_count
-func AddFavoriteCount(HostId int) error {
-	if err := db.Model(&common.User{}).
-		Where("id=?", HostId).
-		Update("favorite_count", gorm.Expr("favorite_count+?", 1)).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
-// 减少favorite_count
-func ReduceFavoriteCount(HostId int) error {
-	if err := db.Model(&common.User{}).
-		Where("id=?", HostId).
-		Update("favorite_count", gorm.Expr("favorite_count-?", 1)).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
+// GetFavoriteList 获取用户点赞视频
 func GetFavoriteList(userId int) ([]Favorite, error) {
 	var favoriteList []Favorite
-	if err := db.Table("favorites").Where("user_id=? AND state=?", userId, 1).Find(&favoriteList).Error; err != nil {
+	if err := db.Table("favorites").Where("user_id=? AND is_favorite=?", userId, 1).Find(&favoriteList).Error; err != nil {
 		return nil, err
 	}
 	return favoriteList, nil
 }
 
+// GetVideoDetail 获取视频详细信息
 func GetVideoDetail(videoId int) (*Video, error) {
 	var video = Video{}
 	if err := db.Table("videos").Where("id=?", videoId).Find(&video).Error; err != nil {
@@ -83,83 +48,53 @@ func GetVideoDetail(videoId int) (*Video, error) {
 	return &video, nil
 }
 
-func btoi(isFavorite bool) int64 {
-	if isFavorite == true {
-		return 1
-	} else {
-		return 0
+// GetFavorite 根据userId查找videoId是否有对应记录
+func GetFavorite(userId int, videoId int) (*Favorite, error) {
+	favorite := Favorite{}
+	if err := db.
+		Where("user_id = ?", userId).
+		Where("video_id = ?", videoId).
+		Take(&favorite).Error; nil != err {
+		logger.Log.Error(err.Error())
+		return nil, err
 	}
+
+	return &favorite, nil
 }
 
-// 添加喜欢数量1
-func FavoriteAdd(userId int, videoId int, isFavorited bool) error {
-	favorite := Favorite{
-		UserId:  int64(userId),
-		VideoId: int64(videoId),
-		State:   (btoi(isFavorited)), // 1点赞， 0未点赞
+// UpdateFavorite 在原来的关系上修改点赞
+func UpdateFavorite(favorite *Favorite, action int) error {
+	// 更新失败，返回错误。
+	if err := db.Model(Favorite{}).
+		Where("id = ?", favorite.Id).
+		Update("is_favorite", action).Error; nil != err {
+		// 更新失败，打印错误日志。
+		logger.Log.Error(err.Error())
+		return err
 	}
-	result := db.Table("favorites").Where("user_id = ? AND video_id = ?", userId, videoId).First(&favorite)
-	if result.Error != nil {
-		if err := db.Table("favorites").Create(&favorite).Error; err != nil {
-			return err
-		}
-	} else {
-		db.Table("favorites").Where("user_id = ? AND video_id = ?", userId, videoId).Update("state", favorite.State)
-	}
-
-	if isFavorited {
-		if favorite.State == 0 {
-			db.Table("videos").Where("id = ?", videoId).Update("favorite_count", gorm.Expr("favorite_count + 1"))
-			//userId的favorite_count增加
-			if err := AddFavoriteCount(userId); err != nil {
-				return err
-			}
-			//videoId对应的userId的total_favorite增加
-			GuestId, err := GetVideoAuthor(videoId)
-			if err != nil {
-				return err
-			}
-			if err := AddTotalFavorited(int(GuestId)); err != nil {
-				return err
-			}
-		}
-	}
+	// 更新成功。
 	return nil
 }
 
-//减少喜欢数量1
-func FavoriteReduce(userId int, videoId int, isFavorited bool) error {
+// AddFavorite 原表中没有点赞记录，新增一条记录
+func AddFavorite(userId int, videoId int) error {
 	favorite := Favorite{
-		UserId:  int64(userId),
-		VideoId: int64(videoId),
-		State:   btoi(isFavorited),
+		UserId:     userId,
+		VideoId:    videoId,
+		IsFavorite: FAVORITED,
 	}
-	result := db.Table("favorites").Where("user_id = ? AND video_id = ?", userId, videoId).First(&favorite)
-	if result.Error != nil {
-		if err := db.Table("favorites").Create(&favorite).Error; err != nil {
-			return err
-		}
-	} else {
-		db.Table("favorites").Where("user_id = ? AND video_id = ?", userId, videoId).Update("state", favorite.State)
+	// 插入失败，返回err.
+	if err := db.Select("UserId", "VideoId", "IsFavorite").Create(&favorite).Error; nil != err {
+		logger.Log.Error(err.Error())
+		return err
 	}
-
-	if !isFavorited {
-		if favorite.State == 0 {
-			db.Table("videos").Where("id = ?", videoId).Update("favorite_count", gorm.Expr("favorite_count - 1"))
-			//userId的favorite_count减少
-			if err := ReduceFavoriteCount(userId); err != nil {
-				return err
-			}
-			//videoId对应的userId的total_favorite减少
-			GuestId, err := GetVideoAuthor(videoId)
-			if err != nil {
-				return err
-			}
-			if err := ReduceTotalFavorited(int(GuestId)); err != nil {
-				return err
-			}
-		}
-	}
+	// 插入成功
 	return nil
+}
 
+func GetFavoriteCount(videoId int) (favoriteCount int64, err error) {
+	if res := db.Table("favorites").Where("video_id = ? AND is_favorite = ?", videoId, FAVORITED).Count(&favoriteCount); nil != res.Error {
+		return 0, res.Error
+	}
+	return
 }

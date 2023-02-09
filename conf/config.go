@@ -74,7 +74,10 @@ type MinioBucketConfig struct {
 
 func InitConfig() error {
 	// 根据文件位置修改
-	workDir, _ := os.Getwd()
+	workDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("os.Getwd failed, err:%v", err)
+	}
 	viper.SetConfigFile(workDir + "/conf/config.yaml")
 	viper.WatchConfig()
 	viper.OnConfigChange(func(in fsnotify.Event) {
@@ -83,7 +86,7 @@ func InitConfig() error {
 			return
 		}
 	})
-	err := viper.ReadInConfig()
+	err = viper.ReadInConfig()
 	if err != nil {
 		return fmt.Errorf("ReadInConfig failed, err:%v", err)
 	}
