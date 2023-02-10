@@ -39,3 +39,18 @@ func GetChatRecordList(userId int, toUserIdRaw string)(messageList []common.Mess
 
 	return messageList,err
 }
+
+func GetChatUnreadList(userId int, toUserIdRaw string)(messageList []common.Message,err error){
+	toUserId,err:=strconv.Atoi(toUserIdRaw)
+	if err!=nil{
+		return []common.Message{},errors.New("query 'toUserId' should be a integer")
+	}
+	// 对方账号是否存在
+	_,err=mysql.CheckUserExist(toUserId)
+	if err!=nil{
+		return []common.Message{},err
+	}
+	messageList,err=mysql.GetChatUnreadList(userId,toUserId)
+
+	return messageList,err
+}

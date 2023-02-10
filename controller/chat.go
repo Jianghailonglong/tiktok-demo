@@ -75,7 +75,8 @@ func MessageChat(c *gin.Context) {
 	//获取消息列表
 	userIdRaw,_:=c.Get(jwt.ContextUserIDKey)
 	userId,_:=userIdRaw.(int)
-	messageList,err:=service.GetChatRecordList(userId,toUserId)
+	//messageList,err:=service.GetChatRecordList(userId,toUserId)
+	messageList,err:=service.GetChatUnreadList(userId,toUserId)
 	if err != nil {
 		c.JSON(http.StatusOK, common.ChatHistoryResponse{
 			Response: common.Response{

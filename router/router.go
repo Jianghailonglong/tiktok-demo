@@ -8,7 +8,10 @@ import (
 
 func InitRouters(r *gin.Engine) {
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200,"连接成功!")
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.JSON(200,gin.H{
+			"msg":"连接成功!",
+		})
 	})
 
 	apiRouter := r.Group("/douyin")
