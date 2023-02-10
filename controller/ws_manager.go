@@ -30,17 +30,17 @@ func (manager *ConnManager) Start() {
 			msg, _ := json.Marshal(msgData)
 			_ = wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
 			//返回未读消息+20条历史消息
-			msgRecords,err:=service.UnreadAndHistory(int(wsConn.UserId),int(wsConn.ToUserId))
-			if err!=nil{
-				logger.Log.Sugar().Errorf("UnreadAndHistory失败:%v",err)
+			msgRecords, err := service.UnreadAndHistory(int(wsConn.UserId), int(wsConn.ToUserId))
+			if err != nil {
+				logger.Log.Sugar().Errorf("UnreadAndHistory失败:%v", err)
 			}
-			for _,mr:=range msgRecords{
-				msgData:=S2CMsgData{
+			for _, mr := range msgRecords {
+				msgData := S2CMsgData{
 					FromUserId: int64(mr.SourceId),
 					MsgContent: mr.Content,
 				}
-				msg,_:=json.Marshal(msgData)
-				_=wsConn.Conn.WriteMessage(websocket.TextMessage,msg)
+				msg, _ := json.Marshal(msgData)
+				_ = wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
 			}
 		//注销连接
 		case wsConn := <-manager.DisConnection:

@@ -88,13 +88,3 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	wg.Wait()
 	return followList, nil
 }
-
-// GetCommonUserInfoById 根据id获取单个用户的所有信息（粉丝数、关注数）
-func GetCommonUserInfoById(userId int64, withUserId int64) (common.User, error) {
-	user, err := mysql.GetInfoById(userId, withUserId)
-	if nil != err {
-		logger.Log.Error(err.Error())
-		return user, err
-	}
-	return user, nil
-}

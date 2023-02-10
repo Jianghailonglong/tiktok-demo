@@ -35,6 +35,7 @@ func InsertChatRecord(userId, toUserId, actionType int, content string) (err err
 	}
 	return
 }
+
 // 最好是:  第一次---未读和10条历史
 //         第二次开始---未读
 func GetChatRecordList(userId, toUserId int) (messageList []common.Message, err error) {
@@ -50,29 +51,32 @@ func GetChatRecordList(userId, toUserId int) (messageList []common.Message, err 
 	messageList = AppendRecordList(recordListA2B, recordListB2A)
 	return messageList, nil
 }
+
 //得到未读列表
 func GetChatUnreadList(userId, toUserId int) (messageList []common.Message, err error) {
-	recordListB2A :=  []ChatRecord{}
-	UnreadDB:=db.Where("source_id = ?", toUserId).Where("target_id = ?", userId).Where("flag=?",0)
+	recordListB2A := []ChatRecord{}
+	UnreadDB := db.Where("source_id = ?", toUserId).Where("target_id = ?", userId).Where("flag=?", 0)
 	res := UnreadDB.Find(&recordListB2A)
 	if res.Error != nil {
 		return messageList, errors.New("GetChatRecordList查询失败")
 	}
-	_=UnreadDB.Select("flag").Updates(map[string]interface{}{"flag": 1})
+	_ = UnreadDB.Select("flag").Updates(map[string]interface{}{"flag": 1})
 	messageList = ChatRecords2Messages(recordListB2A)
 	return messageList, nil
 }
+
 //按createTime升序排序两方的聊天记录
 func AppendRecordList(listA2B, listB2A []ChatRecord) (messageList []common.Message) {
 	listA2B = append(listA2B, listB2A...)
 	sort.Slice(listA2B, func(i, j int) bool {
 		return listA2B[i].CreateTime < listA2B[j].CreateTime
 	})
-	messageList=ChatRecords2Messages(listA2B)
+	messageList = ChatRecords2Messages(listA2B)
 	return messageList
 }
+
 //将[]mysql.ChatRecord转化成[]common.Message
-func ChatRecords2Messages(chatRecords []ChatRecord)(messages []common.Message){
+func ChatRecords2Messages(chatRecords []ChatRecord) (messages []common.Message) {
 	for idx, l := range chatRecords {
 		msg := common.Message{
 			Id:         int64(idx + 1),

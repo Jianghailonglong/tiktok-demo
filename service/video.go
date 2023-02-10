@@ -17,6 +17,7 @@ import (
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/logger"
 	"tiktok-demo/middleware/snowflake"
+	"time"
 )
 
 var (
@@ -116,7 +117,7 @@ func assembleFeed(videos []mysql.Video, resUsers []common.User, videoLikeCntsLis
 	}
 	// 更新为最早发布视频的时间
 	if len(videos) > 0 {
-		feedResponse.NextTime = videos[len(videos)-1].PublishTime
+		feedResponse.NextTime = time.Now().Unix()
 	}
 	return
 }

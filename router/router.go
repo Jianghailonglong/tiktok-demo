@@ -7,13 +7,6 @@ import (
 )
 
 func InitRouters(r *gin.Engine) {
-	r.GET("/ping", func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.JSON(200,gin.H{
-			"msg":"连接成功!",
-		})
-	})
-
 	apiRouter := r.Group("/douyin")
 
 	// basic apis
@@ -34,15 +27,14 @@ func InitRouters(r *gin.Engine) {
 
 	// extra apis - II
 	apiRouter.POST("/relation/action/", jwt.AuthInHeader(), controller.RelationAction)
-	apiRouter.GET("/relation/follow/list/", jwt.AuthInHeader(), controller.FollowList)
-	apiRouter.GET("/relation/follower/list/", jwt.AuthInHeader(), controller.FollowerList)
+	apiRouter.GET("/relation/follow/list/", jwt.AuthWithoutLimitLoginStatus(), controller.FollowList)
+	apiRouter.GET("/relation/follower/list/", jwt.AuthWithoutLimitLoginStatus(), controller.FollowerList)
 	apiRouter.GET("/relation/friend/list/", jwt.AuthInHeader(), controller.FollowerList)
-	apiRouter.GET("/message/chat/",jwt.AuthInHeader() ,controller.MessageChat)
-	apiRouter.POST("/message/action/",jwt.AuthInHeader() ,controller.MessageAction)
+	apiRouter.GET("/message/chat/", jwt.AuthInHeader(), controller.MessageChat)
+	apiRouter.POST("/message/action/", jwt.AuthInHeader(), controller.MessageAction)
 
-	
 	//聊天模块(方案:websocket)
 	//websocket不能够使用gin的中间件 T_T
 	//所以要自己实现鉴权
-	r.GET("/douyin/chat/ws",controller.WsChatHandler)
+	r.GET("/douyin/chat/ws", controller.WsChatHandler)
 }
