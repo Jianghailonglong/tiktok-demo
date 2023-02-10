@@ -67,3 +67,34 @@ CREATE TABLE `favorites`  (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+-- ----------------------------
+-- Table structure for chat_records (http)
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_records`;
+CREATE TABLE `chat_records`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `source_id` bigint(0) NULL DEFAULT NULL,
+  `target_id` bigint(0) NULL DEFAULT NULL,
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `create_time` bigint(0) NULL DEFAULT NULL,
+  `flag` int(0) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 61 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ----------------------------
+-- Table structure for ws_chat_records (websocket)
+-- ----------------------------
+DROP TABLE IF EXISTS `ws_chat_records`;
+CREATE TABLE `ws_chat_records`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `source_id` bigint(0) NULL DEFAULT NULL,
+  `target_id` bigint(0) NULL DEFAULT NULL,
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `create_time` bigint(0) NULL DEFAULT NULL,
+  `flag` bigint(0) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 164 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+SET FOREIGN_KEY_CHECKS = 1;
