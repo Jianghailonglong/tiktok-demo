@@ -151,12 +151,12 @@ func GetInfoById(userId int64, withUserId int64) (common.User, error) {
 	// userId未登录，也可以获取视频流信息，直接置未关注视频作者
 	if userId == -1 {
 		if err := db.Table("users u").
-			Select("u.id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, 0 AS IsFollow", SUBSCRIBED, SUBSCRIBED).
+			Select("u.id AS Id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, 0 AS IsFollow", SUBSCRIBED, SUBSCRIBED).
 			Where("u.id = ?", withUserId).Scan(&user).Error; nil != err {
 			return user, err
 		}
 	} else if err := db.Table("users u").
-		Select("u.id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, (SELECT EXISTS (SELECT 1 FROM relations WHERE user_id = ? AND to_user_id = u.id AND subscribed = 1)) AS IsFollow", SUBSCRIBED, SUBSCRIBED, userId).
+		Select("u.id AS Id, u.username AS Name, (SELECT COUNT(*) FROM relations r WHERE r.user_id = u.id AND r.subscribed = ?) AS FollowCount, (SELECT COUNT(*) FROM relations r WHERE r.to_user_id = u.id AND r.subscribed = ?) AS FollowerCount, (SELECT EXISTS (SELECT 1 FROM relations WHERE user_id = ? AND to_user_id = u.id AND subscribed = 1)) AS IsFollow", SUBSCRIBED, SUBSCRIBED, userId).
 		Where("u.id = ?", withUserId).Scan(&user).Error; nil != err {
 
 		return user, err

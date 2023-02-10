@@ -17,7 +17,7 @@ func Register(c *gin.Context) {
 		Username: username,
 		Password: password,
 	}
-	err := c.ShouldBind(userRequest) 
+	err := c.ShouldBind(userRequest)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.UserResponse{
@@ -102,7 +102,7 @@ func UserInfo(c *gin.Context) {
 		})
 		return
 	}
-	userInfo, err := service.GetUserInfo(userId)
+	userInfo, err := service.GetCommonUserInfoById(userId, userId)
 	if err != nil {
 		c.JSON(http.StatusOK, common.UserInfoResponse{
 			Response: common.Response{

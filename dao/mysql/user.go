@@ -17,16 +17,13 @@ func (User) TableName() string {
 }
 
 // GetUserByUserName 根据用户名查询用户
-func GetUserByUserName(username string) (user User, err error) {
-	res := db.Where("username = ?", username).Take(&user)
-	if res.Error == gorm.ErrRecordNotFound {
-		return user, errors.New("查不到该用户")
-	} else {
-		if res.Error != nil {
-			return user, errors.New("GetUserByUserName查询失败")
-		}
+func GetUserByUserName(username string) (*User, error) {
+	user := User{}
+	db.Where("username = ?", username).Find(&user)
+	if (user == User{}) {
+		return nil, errors.New("未找到用户")
 	}
-	return
+	return &user, nil
 }
 
 // InsertUser 插入新用户
@@ -70,14 +67,14 @@ func GetUserByUserIDList(userIDList []int64) (userList []User, err error) {
 	return
 }
 
-func CheckUserExist(userID int) (ok bool,err error){
+func CheckUserExist(userID int) (ok bool, err error) {
 	users := []User{}
 	res := db.Where("id = ?", userID).Find(&users)
 	if res.Error != nil {
-		return false, errors.New("GetUserByUserID查询失败")
+		return false, errors.New("CheckUserExist失败")
 	}
-	if len(users)!=1{
+	if len(users) != 1 {
 		return false, errors.New("对方ID不存在")
 	}
-	return true,nil
+	return true, nil
 }

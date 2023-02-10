@@ -11,7 +11,7 @@ import (
 // Register 注册用户
 func Register(username, password string) (mysql.User, string, error) {
 	// 1、判断username是否存在，不存在返回true
-	if isExisted := checkUserExist(username); isExisted {
+	if user, _ := mysql.GetUserByUserName(username); user != nil {
 		return mysql.User{}, "", UserExistError
 	}
 	// 2、插入用户和加密的密码
@@ -27,17 +27,6 @@ func Register(username, password string) (mysql.User, string, error) {
 		return mysql.User{}, "", err
 	}
 	return user, token, nil
-}
-
-// checkUserExist 判断用户是否存在
-func checkUserExist(username string) bool {
-	_, err := mysql.GetUserByUserName(username)
-	if err != nil {
-		if err.Error() == "查不到该用户" {
-			return false
-		}
-	}
-	return true
 }
 
 // insertUser 插入新用户
@@ -62,7 +51,7 @@ func hashAndSalt(password string) (string, error) {
 func Login(username, password string) (mysql.User, string, error) {
 	// 1、查询用户
 	user, err := mysql.GetUserByUserName(username)
-	if err != nil {
+	if user == nil {
 		logger.Log.Error(err.Error())
 		return mysql.User{}, "", err
 	}
@@ -71,12 +60,12 @@ func Login(username, password string) (mysql.User, string, error) {
 		return mysql.User{}, "", UserLoginDataError
 	}
 	// 3、生成token
-	token, err := jwt.GenToken(user)
+	token, err := jwt.GenToken(*user)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		return mysql.User{}, "", err
 	}
-	return user, token, nil
+	return *user, token, nil
 }
 
 func comparePassword(password, encryptedPassword string) bool {
@@ -87,17 +76,12 @@ func comparePassword(password, encryptedPassword string) bool {
 	return true
 }
 
-// GetUserInfo 获取userInfo
-func GetUserInfo(userID int64) (common.User, error) {
-	user, err := mysql.GetUserByUserID(userID)
-	if err != nil {
+// GetCommonUserInfoById 根据id获取单个用户的所有信息（粉丝数、关注数）
+func GetCommonUserInfoById(userId int64, withUserId int64) (common.User, error) {
+	user, err := mysql.GetInfoById(userId, withUserId)
+	if nil != err {
 		logger.Log.Error(err.Error())
-		return common.User{}, err
+		return user, err
 	}
-	userInfo := common.User{
-		Id:   int64(user.Id),
-		Name: user.Username,
-		// TODO 关注者、粉丝等
-	}
-	return userInfo, nil
+	return user, nil
 }

@@ -98,7 +98,7 @@ func WsChatHandler(c *gin.Context) {
 		c.Header("Error-type", WsMsgFlags[WsInvalidToUid])
 		return
 	}
-	_,err=mysql.CheckUserExist(toUid)
+	_, err = mysql.CheckUserExist(toUid)
 	if err != nil {
 		c.Header("Error-code", fmt.Sprint(WsToUidNotExist))
 		c.Header("Error-type", WsMsgFlags[WsToUidNotExist])

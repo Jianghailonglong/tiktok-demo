@@ -5,31 +5,17 @@ import (
 	"tiktok-demo/common"
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/logger"
-	"time"
 )
 
 // CommentPost 发布评论
 func CommentPost(userId int, videoId int, text string) *common.Comment {
-	// 1、先看是否已经评论过
-	comment, _ := mysql.GetComment(userId, videoId)
+	// 1、需要创建评论
+	comment, _ := mysql.AddComment(userId, videoId, text)
 	if comment == nil {
-		// 2、需要创建评论
-		comment, _ = mysql.AddComment(userId, videoId, text)
-		if comment == nil {
-			logger.Log.Error("mysql.AddComment failed")
-			return nil
-		}
-	} else {
-		// 3、更新评论为评论状态
-		comment.Content = text
-		comment.CreatedAt = time.Now()
-		err := mysql.UpdateComment(comment, mysql.SUBSCRIBED)
-		if err != nil {
-			logger.Log.Error("mysql.UpdateComment failed")
-			return nil
-		}
+		logger.Log.Error("mysql.AddComment failed")
+		return nil
 	}
-	// 4、获取用户信息
+	// 2、获取用户信息
 	if user, err := GetCommonUserInfoById(int64(userId), int64(userId)); nil == err {
 		return &common.Comment{
 			Id:         int64(comment.Id),
@@ -45,19 +31,7 @@ func CommentPost(userId int, videoId int, text string) *common.Comment {
 
 // CommentDelete 删除评论
 func CommentDelete(commentId int) error {
-	// 1、先看是否已经评论过
-	comment, _ := mysql.GetCommentByCommentId(commentId)
-	if comment == nil {
-		return nil
-	} else {
-		// 2、更新评论为未评论状态
-		err := mysql.UpdateComment(comment, mysql.UNCOMMENTED)
-		if err != nil {
-			logger.Log.Error("mysql.UpdateComment failed")
-			return err
-		}
-	}
-	return nil
+	return mysql.DeleteComment(commentId)
 }
 
 // GetCommentList 获取指定videoId的评论表

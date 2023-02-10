@@ -29,7 +29,7 @@ func GetFeed(latestTimeRaw string) (videos []Video, err error) {
 		return
 	}
 	res := db.Table("videos").Order("publish_time desc").
-		Where("publish_time <= ?", latestTime).Limit(30).Scan(&videos)
+		Where("publish_time <= ?", latestTime).Limit(5).Scan(&videos)
 	if res.Error != nil {
 		logger.Log.Error("GetFeed获取视频流失败")
 		return videos, res.Error
