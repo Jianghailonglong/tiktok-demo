@@ -32,3 +32,17 @@ redis:
   password: ""
   db: 0
   pool_size: 100
+
+minio:
+  endpoint: "127.0.0.1:9000"
+  access_key_id: "minioadmin"
+  secret_access_key: "minioadmin"
+  use_ssL: false
+  video:
+    bucket_name: "video"
+    content_type: "video/mp4"  # 暂时只支持mp4文件上传
+    url: "http://150.158.147.168:8001/video/" # 访问的是nginx的端口，进行转发
+  image:
+    bucket_name: "image"
+    content_type: "image/jpeg" # 封面图暂时截取成jpg/jpeg格式
+    url: "http://150.158.147.168:8001/image/"

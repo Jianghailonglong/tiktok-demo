@@ -26,9 +26,21 @@ type VideoPublishListResponse struct {
 	VideoList []Video `json:"video_list"`
 }
 
-type Response struct {
-	StatusCode int32  `json:"status_code"`
-	StatusMsg  string `json:"status_msg,omitempty"`
+// CommentListResponse 评论表的响应结构体
+type CommentListResponse struct {
+	Response
+	CommentList []Comment `json:"comment_list,omitempty"`
+}
+
+// CommentActionResponse 评论操作的相应结构体
+type CommentActionResponse struct {
+	Response
+	Comment *Comment `json:"comment,omitempty"`
+}
+
+type FavoriteListResponse struct {
+	Response
+	VideoList []Video `json:"video_list,omitempty"`
 }
 
 //发送消息请求的响应
@@ -56,4 +68,9 @@ type FollowerListResponse struct {
 type FollowListResponse struct {
 	Response
 	UserList []User `json:"user_list"`
+}
+
+type Response struct {
+	StatusCode int32  `json:"status_code"`
+	StatusMsg  string `json:"status_msg,omitempty"`
 }

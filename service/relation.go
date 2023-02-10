@@ -7,12 +7,7 @@ import (
 	"tiktok-demo/logger"
 )
 
-const (
-	FOLLOW   = 1 // 获取关注列表
-	FOLLOWER = 2 // 获取粉丝列表
-)
-
-// 关注用户
+// SubscribeUser 关注用户
 func SubscribeUser(userId int, toUserId int) error {
 	// 先看是否原有关注关系
 	relation, _ := mysql.GetRelation(userId, toUserId)
@@ -24,7 +19,7 @@ func SubscribeUser(userId int, toUserId int) error {
 	}
 }
 
-// 取关用户
+// UnsubscribeUser 取关用户
 func UnsubscribeUser(userId int, toUserId int) error {
 	// 先看是否原有关注关系
 	relation, _ := mysql.GetRelation(userId, toUserId)
@@ -36,7 +31,7 @@ func UnsubscribeUser(userId int, toUserId int) error {
 	return mysql.UpdateRelation(relation, mysql.UNSUBSCRIBED)
 }
 
-// 获取粉丝列表
+// GetFollowerList 获取粉丝列表
 func GetFollowerList(userId int64) ([]common.User, error) {
 	idList, err := mysql.GetFollowedIdList(userId)
 
@@ -53,9 +48,10 @@ func GetFollowerList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetInfoById(idList[i], userId, FOLLOWER); nil == err {
-
+			if user, err := GetCommonUserInfoById(userId, idList[i]); nil == err {
 				followedList[i] = user
+			} else {
+				logger.Log.Error("获取用户信息失败")
 			}
 		}(i)
 	}
@@ -64,7 +60,7 @@ func GetFollowerList(userId int64) ([]common.User, error) {
 	return followedList, nil
 }
 
-// 获取关注列表
+// GetFollowList 获取关注列表
 func GetFollowList(userId int64) ([]common.User, error) {
 	idList, err := mysql.GetFollowIdList(userId)
 
@@ -81,9 +77,10 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetInfoById(idList[i], userId, FOLLOW); nil == err {
-
+			if user, err := GetCommonUserInfoById(userId, idList[i]); nil == err {
 				followList[i] = user
+			} else {
+				logger.Log.Error("获取用户信息失败")
 			}
 		}(i)
 	}
@@ -92,9 +89,9 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	return followList, nil
 }
 
-// 根据id获取单个用户的所有信息, relationType= 1代表关注列表 2代表粉丝列表
-func GetInfoById(userId int64, withUserId int64, relationType int) (common.User, error) {
-	user, err := mysql.GetInfoById(userId, withUserId, relationType)
+// GetCommonUserInfoById 根据id获取单个用户的所有信息（粉丝数、关注数）
+func GetCommonUserInfoById(userId int64, withUserId int64) (common.User, error) {
+	user, err := mysql.GetInfoById(userId, withUserId)
 	if nil != err {
 		logger.Log.Error(err.Error())
 		return user, err
