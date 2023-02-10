@@ -30,7 +30,7 @@ func InitMysql() (err error) {
 	}
 	DB.SetMaxIdleConns(conf.Config.MySQLConfig.MaxIdleConns)
 	DB.SetMaxOpenConns(conf.Config.MySQLConfig.MaxOpenConns)
-	migration()
+// 	migration()
 	logger.Log.Info("init mysql success")
 	return
 }
