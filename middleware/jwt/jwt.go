@@ -1,10 +1,11 @@
 package jwt
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"tiktok-demo/conf"
 	"tiktok-demo/dao/mysql"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 const (

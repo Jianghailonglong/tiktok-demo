@@ -43,6 +43,21 @@ type FavoriteListResponse struct {
 	VideoList []Video `json:"video_list,omitempty"`
 }
 
+//发送消息请求的响应
+type ChatMessageResponse struct {
+	Response
+}
+//消息记录请求的响应
+type ChatHistoryResponse struct {
+	Response
+	MessageList []Message `json:"message_list"`
+}
+//ws建立连接的响应
+type WsStartResponse struct{
+	Response
+}
+
+
 // FollowerListResponse 获取粉丝列表响应内容
 type FollowerListResponse struct {
 	Response

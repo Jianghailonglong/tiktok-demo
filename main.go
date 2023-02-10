@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"tiktok-demo/conf"
 	"tiktok-demo/controller"
@@ -10,6 +9,7 @@ import (
 	"tiktok-demo/logger"
 	"tiktok-demo/middleware/snowflake"
 	"tiktok-demo/router"
+	"github.com/gin-contrib/pprof"
 	"tiktok-demo/service"
 )
 
@@ -53,6 +53,8 @@ func main() {
 	r := gin.New()
 	// 替换gin框架日志，自定义GinRecovery
 	r.Use(logger.GinLogger(), logger.GinRecovery(true))
+	//websocket监听
+	go controller.Manager.Start()
 	// 路由设置
 	router.InitRouters(r)
 	pprof.Register(r)

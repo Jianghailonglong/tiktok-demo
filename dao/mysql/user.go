@@ -69,3 +69,15 @@ func GetUserByUserIDList(userIDList []int64) (userList []User, err error) {
 	}
 	return
 }
+
+func CheckUserExist(userID int) (ok bool,err error){
+	users := []User{}
+	res := db.Where("id = ?", userID).Find(&users)
+	if res.Error != nil {
+		return false, errors.New("GetUserByUserID查询失败")
+	}
+	if len(users)!=1{
+		return false, errors.New("对方ID不存在")
+	}
+	return true,nil
+}

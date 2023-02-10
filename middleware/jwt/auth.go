@@ -1,10 +1,11 @@
 package jwt
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 	"tiktok-demo/common"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AuthInHeader 鉴权中间件，许多接口需要鉴权才能访问

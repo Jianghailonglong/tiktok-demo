@@ -17,7 +17,7 @@ func Register(c *gin.Context) {
 		Username: username,
 		Password: password,
 	}
-	err := c.ShouldBind(userRequest)
+	err := c.ShouldBind(userRequest) 
 	if err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.UserResponse{
