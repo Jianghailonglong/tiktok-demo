@@ -3,11 +3,13 @@ package service
 import (
 	"bytes"
 	"context"
+	"github.com/gin-gonic/gin"
 	"github.com/huandu/go-clone"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.uber.org/zap"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
@@ -15,8 +17,11 @@ import (
 	"tiktok-demo/common"
 	"tiktok-demo/conf"
 	"tiktok-demo/dao/mysql"
+	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/kafka"
 	"tiktok-demo/middleware/snowflake"
+	"tiktok-demo/util"
 	"time"
 )
 
@@ -26,18 +31,19 @@ var (
 )
 
 func InitMinio() error {
-	client, err = minio.New(conf.Config.EndPoint, &minio.Options{
+	client, err = minio.New(conf.Config.MinioConfig.EndPoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(conf.Config.AccessKeyID, conf.Config.SecretAccessKey, ""),
 		Secure: conf.Config.UseSsL})
 	if err != nil {
 		logger.Log.Error("", zap.Any("error", err.Error()))
 		return err
 	}
+	logger.Log.Info("init minio success")
 	return nil
 }
 
 // GetFeed 获取视频流
-func GetFeed(latestTime string, userId int) (feedResponse *common.FeedResponse, err error) {
+func GetFeed(c *gin.Context, latestTime string, userId int) (feedResponse *common.FeedResponse, err error) {
 	// 1、获取视频流
 	videoList, err := mysql.GetFeed(latestTime)
 	if err != nil {
@@ -61,13 +67,25 @@ func GetFeed(latestTime string, userId int) (feedResponse *common.FeedResponse, 
 	}
 	// 3、获取视频点赞数
 	videoLikeCntsList := make([]int, size)
+	// 1）从redis获取
 	for i := 0; i < size; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if cnt, err := mysql.GetFavoriteCount(videoList[i].Id); nil == err {
-				videoLikeCntsList[i] = int(cnt)
+			if cnt, err := redis.GetVideoFavoriteCount(c, videoList[i].Id); nil == err && cnt != 0 {
+				videoLikeCntsList[i] = cnt
 			} else {
-				logger.Log.Error("获取点赞次数失败")
+				logger.Log.Error("从redis获取视频点赞次数失败")
+				// 2）从mysql获取
+				if cnt, err := mysql.GetFavoriteCount(videoList[i].Id); nil == err {
+					videoLikeCntsList[i] = int(cnt)
+					// 3）传给mysql更新点赞数
+					err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videoList[i].Id), strconv.Itoa(int(cnt)))
+					if err != nil {
+						logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+					}
+				} else {
+					logger.Log.Error("从mysql获取点赞次数失败")
+				}
 			}
 		}(i)
 	}
@@ -88,10 +106,26 @@ func GetFeed(latestTime string, userId int) (feedResponse *common.FeedResponse, 
 	for i := 0; i < size; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if isFavorite := mysql.CheckFavorite(userId, videoList[i].Id); nil == err {
+			// 1）从redis查看关系，没有关系还需要去mysql进一步确认
+			if isFavorite, err := redis.CheckIsFavorite(c, userId, videoList[i].Id); err == nil && isFavorite {
 				isFavoriteVideoList[i] = isFavorite
 			} else {
-				logger.Log.Error("获取点赞关系失败")
+				logger.Log.Error("从redis获取用户是否点赞失败")
+				// 2）从mysql获取
+				if isFavorite := mysql.CheckFavorite(userId, videoList[i].Id); nil == err {
+					isFavoriteVideoList[i] = isFavorite
+					// 3）传给mysql更新点赞关系
+					if isFavorite {
+						err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videoList[i].Id), strconv.Itoa(userId)+":add")
+					} else {
+						err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videoList[i].Id), strconv.Itoa(userId)+":del")
+					}
+					if err != nil {
+						logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+					}
+				} else {
+					logger.Log.Error("从mysql获取用户是否点赞失败")
+				}
 			}
 		}(i)
 	}
@@ -115,7 +149,19 @@ func assembleFeed(videos []mysql.Video, resUsers []common.User, videoLikeCntsLis
 		feedResponse.VideoList[i].CommentCount = int64(videoCommentCntsList[i])
 		feedResponse.VideoList[i].IsFavorite = isFavoriteVideoList[i]
 	}
-	// 更新为最早发布视频的时间
+	// 按照不同策略进行排序，1、默认发布时间倒序 2、点赞数排序 3、评论数排序
+	// 下面仅仅为了演示使用
+	rand.Seed(time.Now().UnixNano())
+	r := rand.Intn(3)
+	sortVideoCxt := util.SortVideoContext{}
+	if r == 1 {
+		sortVideoCxt.SetSortVideoStrategy(new(util.SortVideoByFavoriteCount))
+		sortVideoCxt.SortVideo(feedResponse.VideoList)
+	} else {
+		sortVideoCxt.SetSortVideoStrategy(new(util.SortVideoByCommentCount))
+		sortVideoCxt.SortVideo(feedResponse.VideoList)
+	}
+	// 为了让最新发布视频也可以展示，更新为当前时间
 	if len(videos) > 0 {
 		feedResponse.NextTime = time.Now().Unix()
 	}
@@ -261,7 +307,7 @@ func genImageBytes() *bytes.Buffer {
 }
 
 // PublishList 通过userId获取发布的全部视频
-func PublishList(userId int64) (videoPublishListResponse *common.VideoPublishListResponse, err error) {
+func PublishList(c *gin.Context, userId int64) (videoPublishListResponse *common.VideoPublishListResponse, err error) {
 	// 1、获取userID发布的视频
 	videos, err := mysql.GetVideoListByUserID(userId)
 	if err != nil {
@@ -277,14 +323,27 @@ func PublishList(userId int64) (videoPublishListResponse *common.VideoPublishLis
 	var wg sync.WaitGroup
 	wg.Add(size * 3)
 
+	// 3、获取视频点赞数
 	videoLikeCntsList := make([]int, size)
+	// 1）从redis获取
 	for i := 0; i < size; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if cnt, err := mysql.GetFavoriteCount(videos[i].Id); nil == err {
-				videoLikeCntsList[i] = int(cnt)
+			if cnt, err := redis.GetVideoFavoriteCount(c, videos[i].Id); nil == err && cnt != 0 {
+				videoLikeCntsList[i] = cnt
 			} else {
-				logger.Log.Error("获取点赞次数失败")
+				logger.Log.Error("从redis获取视频点赞次数失败")
+				// 2）从mysql获取
+				if cnt, err := mysql.GetFavoriteCount(videos[i].Id); nil == err {
+					videoLikeCntsList[i] = int(cnt)
+					// 3）传给mysql更新点赞数
+					err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videos[i].Id), strconv.Itoa(int(cnt)))
+					if err != nil {
+						logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+					}
+				} else {
+					logger.Log.Error("从mysql获取点赞次数失败")
+				}
 			}
 		}(i)
 	}
@@ -305,10 +364,26 @@ func PublishList(userId int64) (videoPublishListResponse *common.VideoPublishLis
 	for i := 0; i < size; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if isFavorite := mysql.CheckFavorite(int(userId), videos[i].Id); nil == err {
+			// 1）从redis查看关系
+			if isFavorite, err := redis.CheckIsFavorite(c, int(userId), videos[i].Id); err == nil && isFavorite {
 				isFavoriteVideoList[i] = isFavorite
 			} else {
-				logger.Log.Error("获取点赞关系失败")
+				logger.Log.Error("从redis获取用户是否点赞失败")
+				// 2）从mysql获取
+				if isFavorite := mysql.CheckFavorite(int(userId), videos[i].Id); nil == err {
+					isFavoriteVideoList[i] = isFavorite
+					// 3）传给mysql更新点赞关系
+					if isFavorite {
+						err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videos[i].Id), strconv.Itoa(int(userId))+":add")
+					} else {
+						err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videos[i].Id), strconv.Itoa(int(userId))+":del")
+					}
+					if err != nil {
+						logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+					}
+				} else {
+					logger.Log.Error("从mysql获取用户是否点赞失败")
+				}
 			}
 		}(i)
 	}
