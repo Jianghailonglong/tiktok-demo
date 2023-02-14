@@ -31,7 +31,7 @@ func Feed(c *gin.Context) {
 		})
 		return
 	}
-	feedResponse, err := service.GetFeed(latestTime, userID)
+	feedResponse, err := service.GetFeed(c, latestTime, userID)
 	if err != nil {
 		logger.Log.Error("service.GetFeed failed", zap.Any("error", err))
 		c.JSON(http.StatusOK, common.FeedResponse{
@@ -111,7 +111,7 @@ func PublishList(c *gin.Context) {
 		})
 		return
 	}
-	videoPublishListResponse, err := service.PublishList(userID)
+	videoPublishListResponse, err := service.PublishList(c, userID)
 	if err != nil {
 		logger.Log.Error("service.PublishList failed", zap.Any("error", err))
 		c.JSON(http.StatusOK, common.UserInfoResponse{
