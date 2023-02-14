@@ -22,7 +22,7 @@ func CheckFavorite(uid int, vid int) bool {
 	var total int64
 	err := db.Table("favorites").Where("user_id = ? AND video_id = ? AND is_favorite = 1", uid, vid).Count(&total).Error
 	if err == gorm.ErrRecordNotFound {
-		return false //关注不存在
+		return false // 点赞不存在
 	}
 	if total == 0 {
 		return false
@@ -30,13 +30,14 @@ func CheckFavorite(uid int, vid int) bool {
 	return true
 }
 
-// GetFavoriteList 获取用户点赞视频
-func GetFavoriteList(userId int) ([]Favorite, error) {
-	var favoriteList []Favorite
-	if err := db.Table("favorites").Where("user_id=? AND is_favorite=?", userId, 1).Find(&favoriteList).Error; err != nil {
+// GetFavoriteVideoIdList 获取用户点赞视频id
+func GetFavoriteVideoIdList(userId int) ([]int, error) {
+	var favoriteVideoIdList []int
+	if err := db.Table("favorites").Where("user_id=? AND is_favorite=?", userId, 1).Pluck("video_id", &favoriteVideoIdList).Error; err != nil {
 		return nil, err
 	}
-	return favoriteList, nil
+
+	return favoriteVideoIdList, nil
 }
 
 // GetVideoDetail 获取视频详细信息
@@ -55,7 +56,7 @@ func GetFavorite(userId int, videoId int) (*Favorite, error) {
 		Where("user_id = ?", userId).
 		Where("video_id = ?", videoId).
 		Take(&favorite).Error; nil != err {
-		logger.Log.Error(err.Error())
+		logger.Log.Warn(err.Error())
 		return nil, err
 	}
 
@@ -82,6 +83,22 @@ func AddFavorite(userId int, videoId int) error {
 		UserId:     userId,
 		VideoId:    videoId,
 		IsFavorite: FAVORITED,
+	}
+	// 插入失败，返回err.
+	if err := db.Select("UserId", "VideoId", "IsFavorite").Create(&favorite).Error; nil != err {
+		logger.Log.Error(err.Error())
+		return err
+	}
+	// 插入成功
+	return nil
+}
+
+// UnFavorite 原表中没有点赞记录，新增一条记录
+func UnFavorite(userId int, videoId int) error {
+	favorite := Favorite{
+		UserId:     userId,
+		VideoId:    videoId,
+		IsFavorite: UNFAVORITED,
 	}
 	// 插入失败，返回err.
 	if err := db.Select("UserId", "VideoId", "IsFavorite").Create(&favorite).Error; nil != err {

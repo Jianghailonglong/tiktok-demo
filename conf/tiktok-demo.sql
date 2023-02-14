@@ -21,7 +21,9 @@ CREATE TABLE `relations` (
     `id` int NOT NULL AUTO_INCREMENT COMMENT '自增关系id',
     `user_id` int NOT NULL COMMENT '关注者id',
     `to_user_id` int NOT NULL COMMENT '被关注者id',
-    `subscribed` int NOT NULL COMMENT '1为正在关注，0为取关', PRIMARY KEY (`id`)
+    `subscribed` int NOT NULL COMMENT '1为正在关注，0为取关', PRIMARY KEY (`id`),
+    INDEX `user_id_to_user_id_idx`(`user_id`, `to_user_id`) USING BTREE COMMENT '复合索引',
+    INDEX `to_user_id_idx`(`to_user_id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ----------------------------
@@ -49,7 +51,8 @@ CREATE TABLE `comments`  (
     `video_id` int NOT NULL COMMENT '视频id',
     `user_id` int NOT NULL COMMENT '用户id',
     `content` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '评论内容',
-    PRIMARY KEY (`id`) USING BTREE
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `video_id_idx`(`video_id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -61,7 +64,8 @@ CREATE TABLE `favorites`  (
     `user_id` int NOT NULL COMMENT '用户id',
     `video_id` int NOT NULL COMMENT '视频id',
     `is_favorite` int NOT NULL COMMENT '是否点赞，0取消点赞，1点赞',
-    PRIMARY KEY (`id`) USING BTREE
+    PRIMARY KEY (`id`) USING BTREE,
+    INDEX `user_id_video_id_idx`(`user_id`, `video_id`) USING BTREE COMMENT '复合索引'
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------

@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"golang.org/x/crypto/bcrypt"
 	"tiktok-demo/common"
 	"tiktok-demo/dao/mysql"
+	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
 	"tiktok-demo/middleware/jwt"
 )
@@ -76,12 +78,35 @@ func comparePassword(password, encryptedPassword string) bool {
 	return true
 }
 
-// GetCommonUserInfoById 根据id获取单个用户的所有信息（粉丝数、关注数）
+// GetCommonUserInfoById 获取common.User
 func GetCommonUserInfoById(userId int64, withUserId int64) (common.User, error) {
+	// 1、根据id获取单个用户的信息（粉丝数、关注数）
 	user, err := mysql.GetInfoById(userId, withUserId)
 	if nil != err {
 		logger.Log.Error(err.Error())
 		return user, err
 	}
+	// 2、获取作品数以及用户发布视频id列表
+	videoIdList, err := redis.GetPublishVideoList(context.Background(), int(withUserId))
+	if err != nil {
+		return user, err
+	}
+	user.WorkCount = int64(len(videoIdList))
+	// 3、获取用户点赞数，其实就是喜欢列表的数目
+	favoriteCount, err := redis.GetUserFavoriteVideoCnt(context.Background(), int(withUserId))
+	if err != nil {
+		return user, err
+	}
+	user.FavoriteCount = int64(favoriteCount)
+	// 4、获取用户被点赞总数目，实质上是用户发布视频被点赞总数
+	totalFavorited := 0
+	for _, videoId := range videoIdList {
+		count, err := redis.GetVideoFavoriteCount(context.Background(), videoId)
+		if err != nil {
+			continue
+		}
+		totalFavorited += count
+	}
+	user.TotalFavorited = int64(totalFavorited)
 	return user, nil
 }

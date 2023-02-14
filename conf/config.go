@@ -22,6 +22,7 @@ type AppConfig struct {
 	*RedisConfig `mapstructure:"redis"`
 	*AuthConfig  `mapstructure:"auth"`
 	*MinioConfig `mapstructure:"minio"`
+	*KafkaConfig `mapstructure:"kafka"`
 }
 
 type MySQLConfig struct {
@@ -35,12 +36,11 @@ type MySQLConfig struct {
 }
 
 type RedisConfig struct {
-	Host         string `mapstructure:"host"`
-	Password     string `mapstructure:"password"`
-	Port         int    `mapstructure:"port"`
-	DB           int    `mapstructure:"db"`
-	PoolSize     int    `mapstructure:"pool_size"`
-	MinIdleConns int    `mapstructure:"min_idle_conns"`
+	Host     string `mapstructure:"host"`
+	Password string `mapstructure:"password"`
+	Port     int    `mapstructure:"port"`
+	DB       int    `mapstructure:"db"`
+	PoolSize int    `mapstructure:"pool_size"`
 }
 
 type LogConfig struct {
@@ -70,6 +70,10 @@ type MinioBucketConfig struct {
 	BucketName  string `mapstructure:"bucket_name"`
 	ContentType string `mapstructure:"content_type"`
 	URL         string `mapstructure:"url"`
+}
+
+type KafkaConfig struct {
+	EndPoint string `mapstructure:"endpoint"`
 }
 
 func InitConfig() error {

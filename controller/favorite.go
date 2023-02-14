@@ -50,7 +50,7 @@ func FavoriteList(c *gin.Context) {
 		return
 	}
 
-	favoriteListResponse, err := service.FavoriteList(int(userID))
+	favoriteListResponse, err := service.FavoriteList(c, int(userID))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, common.FavoriteListResponse{

@@ -3,7 +3,6 @@ package mysql
 import (
 	"errors"
 	"strconv"
-	"tiktok-demo/conf"
 	"tiktok-demo/logger"
 	"time"
 )
@@ -38,19 +37,28 @@ func GetFeed(latestTimeRaw string) (videos []Video, err error) {
 }
 
 // InsertVideo 插入视频
-func InsertVideo(userID int, title, videoName, imageName string) (err error) {
+func InsertVideo(userID int, title, playUrl, coverUrl string) (videoId int, err error) {
 	video := Video{
 		AuthorId:    userID,
-		PlayUrl:     conf.Config.MinioConfig.Video.URL + videoName, // 访问nginx接口进行代理，易于后续实现分布式minio扩展
-		CoverUrl:    conf.Config.MinioConfig.Image.URL + imageName,
+		PlayUrl:     playUrl, // 访问nginx接口进行代理，易于后续实现分布式minio扩展
+		CoverUrl:    coverUrl,
 		Title:       title,
 		PublishTime: time.Now().Unix(),
 	}
 	res := db.Create(&video)
 	if res.Error != nil {
-		return errors.New("InsertVideo插入失败")
+		return 0, errors.New("InsertVideo插入失败")
 	}
-	return
+	return video.Id, nil
+}
+
+// DeleteVideo 删除视频
+func DeleteVideo(videoId int) (err error) {
+	res := db.Where("id = ?", videoId).Delete(&Video{})
+	if res.Error != nil {
+		return errors.New("DeleteVideo删除失败")
+	}
+	return nil
 }
 
 // GetVideoListByUserID 根据userID获取全部视频列表
