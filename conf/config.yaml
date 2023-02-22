@@ -29,7 +29,7 @@ mysql:
 redis:
   host: "127.0.0.1"
   port: 6379
-  password: ""
+  password: "123456"
   db: 0
   pool_size: 100
 
@@ -46,3 +46,6 @@ minio:
     bucket_name: "image"
     content_type: "image/jpeg" # 封面图暂时截取成jpg/jpeg格式
     url: "http://150.158.147.168:8001/image/"
+
+kafka:
+  endpoint: "127.0.0.1:9092"

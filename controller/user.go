@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"tiktok-demo/common"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/jwt"
 	"tiktok-demo/service"
 )
 
@@ -89,6 +90,10 @@ func Login(c *gin.Context) {
 
 // UserInfo 显示用户信息
 func UserInfo(c *gin.Context) {
+	// 已登录用户
+	loginUserIDRaw, _ := c.Get(jwt.ContextUserIDKey)
+	loginUserId, _ := loginUserIDRaw.(int)
+	// user_id可以是登录用户id，也可以是查看其它用户信息时的用户id
 	userIdStr := c.Query("user_id")
 	userInfoRequest := &common.UserInfoRequest{UserId: userIdStr}
 	err := c.ShouldBind(userInfoRequest)
@@ -102,7 +107,7 @@ func UserInfo(c *gin.Context) {
 		})
 		return
 	}
-	userInfo, err := service.GetCommonUserInfoById(userId, userId)
+	userInfo, err := service.GetCommonUserInfoById(int64(loginUserId), userId)
 	if err != nil {
 		c.JSON(http.StatusOK, common.UserInfoResponse{
 			Response: common.Response{

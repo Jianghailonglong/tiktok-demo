@@ -145,7 +145,7 @@ func IsFollow(userAId int64, userBId int64) (bool, error) {
 	return true, nil
 }
 
-// 通过id获取关注者或者被关注者的信息 withUserId: 需要查询用户的id;
+// GetInfoById 通过id获取关注者或者被关注者的信息 withUserId: 需要查询用户的id;
 func GetInfoById(userId int64, withUserId int64) (common.User, error) {
 	user := common.User{}
 	// userId未登录，也可以获取视频流信息，直接置未关注视频作者

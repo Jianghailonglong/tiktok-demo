@@ -31,7 +31,7 @@ func Feed(c *gin.Context) {
 		})
 		return
 	}
-	feedResponse, err := service.GetFeed(latestTime, userID)
+	feedResponse, err := service.GetFeed(c, latestTime, userID)
 	if err != nil {
 		logger.Log.Error("service.GetFeed failed", zap.Any("error", err))
 		c.JSON(http.StatusOK, common.FeedResponse{
@@ -55,22 +55,18 @@ func Publish(c *gin.Context) {
 	title := c.PostForm("title")
 	file, _, err := c.Request.FormFile("data")
 	if err != nil {
-		c.JSON(http.StatusOK, common.UserInfoResponse{
-			Response: common.Response{
-				StatusCode: CodeInvalidParams,
-				StatusMsg:  MsgFlags[CodeInvalidParams],
-			},
+		c.JSON(http.StatusOK, common.Response{
+			StatusCode: CodeInvalidParams,
+			StatusMsg:  MsgFlags[CodeInvalidParams],
 		})
 		return
 	}
 	userIDRaw, _ := c.Get(jwt.ContextUserIDKey)
 	userID, ok := userIDRaw.(int)
 	if !ok {
-		c.JSON(http.StatusOK, common.UserInfoResponse{
-			Response: common.Response{
-				StatusCode: CodeInvalidParams,
-				StatusMsg:  MsgFlags[CodeInvalidParams],
-			},
+		c.JSON(http.StatusOK, common.Response{
+			StatusCode: CodeInvalidParams,
+			StatusMsg:  MsgFlags[CodeInvalidParams],
 		})
 		return
 	}
@@ -111,7 +107,7 @@ func PublishList(c *gin.Context) {
 		})
 		return
 	}
-	videoPublishListResponse, err := service.PublishList(userID)
+	videoPublishListResponse, err := service.PublishList(c, userID)
 	if err != nil {
 		logger.Log.Error("service.PublishList failed", zap.Any("error", err))
 		c.JSON(http.StatusOK, common.UserInfoResponse{

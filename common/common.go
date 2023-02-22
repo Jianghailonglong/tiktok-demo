@@ -19,20 +19,23 @@ type Comment struct {
 }
 
 type User struct {
-	Id            int64  `json:"id,omitempty"`
-	Name          string `json:"name,omitempty"`
-	FollowCount   int64  `json:"follow_count"`
-	FollowerCount int64  `json:"follower_count"`
-	IsFollow      bool   `json:"is_follow"`
+	Id             int64  `json:"id,omitempty"`
+	Name           string `json:"name,omitempty"`
+	FollowCount    int64  `json:"follow_count"`
+	FollowerCount  int64  `json:"follower_count"`
+	IsFollow       bool   `json:"is_follow"`
+	TotalFavorited int64  `json:"total_favorited"` // 获赞总数量
+	WorkCount      int64  `json:"work_count"`      // 作品数量
+	FavoriteCount  int64  `json:"favorite_count"`  // 点赞数量
 }
 
 //聊天记录
 type Message struct {
 	Id         int64  `json:"id,omitempty"` //消息发送方id
-	FromUserId int64    `json:"from_user_id"`
-	ToUserId   int64    `json:"to_user_id"`
+	FromUserId int64  `json:"from_user_id"`
+	ToUserId   int64  `json:"to_user_id"`
 	Content    string `json:"content,omitempty"`
-	CreateTime int64 `json:"create_time,omitempty"`
+	CreateTime int64  `json:"create_time,omitempty"`
 }
 
 type MessageSendEvent struct {

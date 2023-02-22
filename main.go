@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"tiktok-demo/conf"
 	"tiktok-demo/controller"
 	"tiktok-demo/dao/mysql"
+	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/kafka"
 	"tiktok-demo/middleware/snowflake"
 	"tiktok-demo/router"
-	"github.com/gin-contrib/pprof"
 	"tiktok-demo/service"
 )
 
@@ -27,6 +29,10 @@ func initDependencies() error {
 	if err != nil {
 		return err
 	}
+	err = redis.InitRedis()
+	if err != nil {
+		return err
+	}
 	err = controller.InitTrans("en")
 	if err != nil {
 		return err
@@ -36,6 +42,14 @@ func initDependencies() error {
 		return err
 	}
 	err = snowflake.InitSonyFlake(uint16(conf.Config.MachineID))
+	if err != nil {
+		return err
+	}
+	err = kafka.InitProducers()
+	if err != nil {
+		return err
+	}
+	err = kafka.InitConsumerGroups()
 	return err
 }
 

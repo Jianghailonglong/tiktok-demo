@@ -21,7 +21,7 @@ func MessageAction(c *gin.Context) {
 		ActionType: actionType,
 		Content:    content,
 	}
-	err:=c.ShouldBind(chatMessageRequest)
+	err := c.ShouldBind(chatMessageRequest)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.ChatMessageResponse{
@@ -33,9 +33,9 @@ func MessageAction(c *gin.Context) {
 		return
 	}
 	//聊天消息数据插入
-	userIdRaw,_:=c.Get(jwt.ContextUserIDKey)
-	userId,_:=userIdRaw.(int)
-	if err=service.AddChatRecord(userId,toUserId,actionType,content);err!=nil{
+	userIdRaw, _ := c.Get(jwt.ContextUserIDKey)
+	userId, _ := userIdRaw.(int)
+	if err = service.AddChatRecord(userId, toUserId, actionType, content); err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.ChatMessageResponse{
 			Response: common.Response{
@@ -43,25 +43,25 @@ func MessageAction(c *gin.Context) {
 				StatusMsg:  MsgFlags[CodeInsertError],
 			},
 		})
-	}else{
-		c.JSON(http.StatusOK,common.ChatMessageResponse{
+	} else {
+		c.JSON(http.StatusOK, common.ChatMessageResponse{
 			Response: common.Response{
 				StatusCode: CodeSuccess,
-				StatusMsg: MsgFlags[CodeSuccess],
+				StatusMsg:  MsgFlags[CodeSuccess],
 			},
 		})
 	}
-
 }
+
 func MessageChat(c *gin.Context) {
-	token:=c.Query("token")
-	toUserId:=c.Query("to_user_id")
-	chatHistoryRequest:=&common.ChatHistoryRequest{
-		Token: token,
+	token := c.Query("token")
+	toUserId := c.Query("to_user_id")
+	chatHistoryRequest := &common.ChatHistoryRequest{
+		Token:    token,
 		ToUserId: toUserId,
 	}
 	//用于验证参数合法性
-	err := c.ShouldBind(chatHistoryRequest) 
+	err := c.ShouldBind(chatHistoryRequest)
 	if err != nil {
 		logger.Log.Error(err.Error())
 		c.JSON(http.StatusOK, common.ChatHistoryResponse{
@@ -73,10 +73,10 @@ func MessageChat(c *gin.Context) {
 		return
 	}
 	//获取消息列表
-	userIdRaw,_:=c.Get(jwt.ContextUserIDKey)
-	userId,_:=userIdRaw.(int)
+	userIdRaw, _ := c.Get(jwt.ContextUserIDKey)
+	userId, _ := userIdRaw.(int)
 	//messageList,err:=service.GetChatRecordList(userId,toUserId)
-	messageList,err:=service.GetChatUnreadList(userId,toUserId)
+	messageList, err := service.GetChatUnreadList(userId, toUserId)
 	if err != nil {
 		c.JSON(http.StatusOK, common.ChatHistoryResponse{
 			Response: common.Response{
@@ -86,7 +86,7 @@ func MessageChat(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK,common.ChatHistoryResponse{
+	c.JSON(http.StatusOK, common.ChatHistoryResponse{
 		Response: common.Response{
 			StatusCode: CodeSuccess,
 			StatusMsg:  MsgFlags[CodeSuccess],
