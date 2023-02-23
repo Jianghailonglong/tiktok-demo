@@ -12,3 +12,6 @@
 
 ## 2.数据库设计
 ![img.png](_images/数据库表设计.png)
+
+## 3.详细设计
+[https://zvrkpwe3jg.feishu.cn/docx/T2g7de8ONoGLZax9IxBc2PBRnUf](https://zvrkpwe3jg.feishu.cn/docx/T2g7de8ONoGLZax9IxBc2PBRnUf)
