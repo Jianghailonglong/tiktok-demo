@@ -1,41 +1,49 @@
 package service
 
 import (
+	"context"
+	"go.uber.org/zap"
+	"strconv"
 	"sync"
 	"tiktok-demo/common"
-	"tiktok-demo/dao/mysql"
+	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/kafka"
 )
 
 // SubscribeUser 关注用户
 func SubscribeUser(userId int, toUserId int) error {
-	// 先看是否原有关注关系
-	relation, _ := mysql.GetRelation(userId, toUserId)
-
-	if relation == nil {
-		return mysql.AddRelation(userId, toUserId)
-	} else {
-		return mysql.UpdateRelation(relation, mysql.SUBSCRIBED)
+	// 1、将消息传给kafka
+	// kafka关注消息格式 key: userId
+	// value: toUserId:del，删除，value: toUserId:add，添加
+	err = kafka.RelationClient.SendMessage(strconv.Itoa(userId), strconv.Itoa(toUserId)+":add")
+	if err != nil {
+		logger.Log.Error("RelationClient.SendMessage failed", zap.Any("error", err))
+		return err
 	}
+	return nil
 }
 
 // UnsubscribeUser 取关用户
 func UnsubscribeUser(userId int, toUserId int) error {
-	// 先看是否原有关注关系
-	relation, _ := mysql.GetRelation(userId, toUserId)
-
-	if relation == nil {
-		return nil
+	// 1、将消息传给kafka
+	// kafka关注消息格式 key: userId
+	// value: toUserId:del，删除，value: toUserId:add，添加
+	err = kafka.RelationClient.SendMessage(strconv.Itoa(userId), strconv.Itoa(toUserId)+":del")
+	if err != nil {
+		logger.Log.Error("RelationClient.SendMessage failed", zap.Any("error", err))
+		return err
 	}
-
-	return mysql.UpdateRelation(relation, mysql.UNSUBSCRIBED)
+	return nil
 }
 
 // GetFollowerList 获取粉丝列表
 func GetFollowerList(userId int64) ([]common.User, error) {
-	idList, err := mysql.GetFollowedIdList(userId)
+	idList, err := redis.GetRelationFollowerList(context.Background(), int(userId))
+	// idList, err := mysql.GetFollowedIdList(userId)
 
 	if nil != err {
+		logger.Log.Error("redis.GetRelationFollowerList failed", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -48,7 +56,7 @@ func GetFollowerList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetCommonUserInfoById(userId, idList[i]); nil == err {
+			if user, err := GetCommonUserInfoById(userId, int64(idList[i])); nil == err {
 				followedList[i] = user
 			} else {
 				logger.Log.Error("获取用户信息失败")
@@ -62,9 +70,11 @@ func GetFollowerList(userId int64) ([]common.User, error) {
 
 // GetFollowList 获取关注列表
 func GetFollowList(userId int64) ([]common.User, error) {
-	idList, err := mysql.GetFollowIdList(userId)
+	idList, err := redis.GetRelationFollowList(context.Background(), int(userId))
+	// idList, err := mysql.GetFollowIdList(userId)
 
 	if nil != err {
+		logger.Log.Error("redis.GetRelationFollowList failed", zap.Any("error", err))
 		return nil, err
 	}
 
@@ -77,7 +87,7 @@ func GetFollowList(userId int64) ([]common.User, error) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			defer wg.Done()
-			if user, err := GetCommonUserInfoById(userId, idList[i]); nil == err {
+			if user, err := GetCommonUserInfoById(userId, int64(idList[i])); nil == err {
 				followList[i] = user
 			} else {
 				logger.Log.Error("获取用户信息失败")

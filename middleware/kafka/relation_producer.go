@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-// ChatProducer 聊天相关的生产者
-type ChatProducer struct {
+// RelationProducer 关注相关的生产者
+type RelationProducer struct {
 	Client sarama.SyncProducer
 	Topic  string
 }
 
-func (p *ChatProducer) SendMessage(key, value string) error {
+func (p *RelationProducer) SendMessage(key, value string) error {
 	// 构造一个消息
 	msg := &sarama.ProducerMessage{}
 	msg.Topic = p.Topic
@@ -31,7 +31,7 @@ func (p *ChatProducer) SendMessage(key, value string) error {
 	return nil
 }
 
-func (p *ChatProducer) Close() error {
+func (p *RelationProducer) Close() error {
 	err := p.Client.Close()
 	if err != nil {
 		logger.Log.Error(err.Error())

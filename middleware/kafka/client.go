@@ -32,6 +32,12 @@ func InitProducers() error {
 	}
 	ChatClient.Topic = ChatTopic
 
+	RelationClient.Client = newProducer(addrs)
+	if RelationClient.Client == nil {
+		return errors.New("create new producer failed")
+	}
+	RelationClient.Topic = RelationTopic
+
 	logger.Log.Info("init producers success")
 	return nil
 }
