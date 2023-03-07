@@ -7,6 +7,8 @@ const (
 	FavoriteGroupId = "favorite-group"
 	ChatTopic       = "chat"
 	ChatGroupId     = "chat-group"
+	RelationTopic   = "relation"
+	RelationGroupId = "relation-group"
 )
 
 var (
@@ -16,4 +18,6 @@ var (
 	FavoriteServerGroup FavoriteConsumerGroup
 	ChatClient          ChatProducer
 	ChatServerGroup     ChatConsumerGroup
+	RelationClient      RelationProducer
+	RelationServerGroup RelationConsumerGroup
 )

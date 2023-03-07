@@ -34,6 +34,13 @@ func InitConsumerGroups() error {
 	}
 	go ChatServerGroup.StartConsume(ctx, ChatTopic)
 
+	// 关注消费组
+	RelationServerGroup.Consumer = newConsumerGroup(strings.Split(conf.Config.KafkaConfig.EndPoint, ","), RelationGroupId)
+	if RelationServerGroup.Consumer == nil {
+		return errors.New("create new consumer failed")
+	}
+	go RelationServerGroup.StartConsume(ctx, RelationTopic)
+
 	logger.Log.Info("init consumers success")
 	return nil
 }
