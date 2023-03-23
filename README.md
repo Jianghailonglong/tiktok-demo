@@ -1,4 +1,6 @@
 # tiktok-demo
+## 0.青训营相关
+![img.png](_images/青训营奖项.jpg)
 ## 1.安装部署
 1. 安装mysql，执行sql文件
 2. 安装nginx，根据项目中conf/nginx.conf修改nginx.conf配置文件，重新启动
