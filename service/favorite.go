@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"strconv"
@@ -9,37 +10,74 @@ import (
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
+	"tiktok-demo/middleware/batcher"
 	"tiktok-demo/middleware/kafka"
+	"time"
 )
 
-// FavoriteAction 点赞操作
-func FavoriteAction(userId int, videoId int, actionType int) (err error) {
-	if actionType == 1 {
-		return FavoriteVideo(userId, videoId)
+const (
+	batcherSize     = 100
+	batcherBuffer   = 100
+	batcherWorker   = 10
+	batcherInterval = time.Second
+)
+
+type FavoriteLogic struct {
+	batcher *batcher.Batcher
+}
+
+func NewFavoriteLogic() *FavoriteLogic {
+	f := &FavoriteLogic{}
+	// 利用batcher进行批处理
+	b := batcher.New(
+		batcher.WithSize(batcherSize),
+		batcher.WithBuffer(batcherBuffer),
+		batcher.WithWorker(batcherWorker),
+		batcher.WithInterval(batcherInterval),
+	)
+	// 需要定义Sharding和Do方法
+	b.Sharding = func(key string) int {
+		pid, _ := strconv.ParseInt(key, 10, 64)
+		return int(pid) % batcherWorker
 	}
-	return UnFavoriteVideo(userId, videoId)
+	b.Do = func(ctx context.Context, vals map[string][]string) {
+		if err = kafka.FavoriteClient.SendMessages(vals); err != nil {
+			logger.Log.Error("kafka.FavoriteClient.SendMessages failed", zap.Any("error", err))
+		}
+	}
+	f.batcher = b
+	f.batcher.Start()
+	return f
+}
+
+// FavoriteAction 点赞操作
+func (f *FavoriteLogic) FavoriteAction(userId int, videoId int, actionType int) (err error) {
+	if actionType == 1 {
+		return f.FavoriteVideo(userId, videoId)
+	}
+	return f.UnFavoriteVideo(userId, videoId)
 }
 
 // FavoriteVideo 点赞视频
-func FavoriteVideo(userId int, videoId int) (err error) {
+func (f *FavoriteLogic) FavoriteVideo(userId int, videoId int) (err error) {
 	// 1、将消息传给kafka
 	// kafka点赞消息格式 key: videoId
 	// value: userId:del，删除，value: userId:add，添加， value: cnt，添加视频点赞数
-	err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videoId), strconv.Itoa(userId)+":add")
+	err = f.batcher.Add(strconv.Itoa(videoId), strconv.Itoa(userId)+":add")
 	if err != nil {
-		logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+		logger.Log.Error("f.batcher.Add failed", zap.Any("error", err))
 		return err
 	}
 	return nil
 }
 
 // UnFavoriteVideo 取消点赞
-func UnFavoriteVideo(userId int, videoId int) (err error) {
+func (f *FavoriteLogic) UnFavoriteVideo(userId int, videoId int) (err error) {
 	// 1、将信息传给kafka
 	// value: userId:del，删除 value: userId:add，添加
-	err = kafka.FavoriteClient.SendMessage(strconv.Itoa(videoId), strconv.Itoa(userId)+":del")
+	err = f.batcher.Add(strconv.Itoa(videoId), strconv.Itoa(userId)+":del")
 	if err != nil {
-		logger.Log.Error("FavoriteClient.SendMessage failed", zap.Any("error", err))
+		logger.Log.Error("f.batcher.Add failed", zap.Any("error", err))
 		return err
 	}
 	return nil

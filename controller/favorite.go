@@ -22,7 +22,9 @@ func FavoriteAction(c *gin.Context) {
 	videoIdStr := c.Query("video_id")
 	videoId, _ := strconv.ParseInt(videoIdStr, 10, 10)
 
-	err := service.FavoriteAction(userId, int(videoId), int(actionType))
+	l := service.NewFavoriteLogic()
+	err := l.FavoriteAction(userId, int(videoId), int(actionType))
+	//err := service.FavoriteAction(userId, int(videoId), int(actionType))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, common.Response{
 			StatusCode: 1,

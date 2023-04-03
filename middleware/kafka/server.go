@@ -21,11 +21,11 @@ func InitConsumerGroups() error {
 	go VideoServerGroup.StartConsume(ctx, VideoTopic)
 
 	// 点赞消费组
-	FavoriteServerGroup.Consumer = newConsumerGroup(strings.Split(conf.Config.KafkaConfig.EndPoint, ","), FavoriteGroupId)
-	if FavoriteServerGroup.Consumer == nil {
+	f := NewFavoriteConsumerGroup()
+	if f == nil {
 		return errors.New("create new consumer failed")
 	}
-	go FavoriteServerGroup.StartConsume(ctx, FavoriteTopic)
+	go f.StartConsume(ctx, FavoriteTopic)
 
 	// 聊天消费组
 	ChatServerGroup.Consumer = newConsumerGroup(strings.Split(conf.Config.KafkaConfig.EndPoint, ","), ChatGroupId)

@@ -8,16 +8,33 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"tiktok-demo/conf"
 	"tiktok-demo/dao/mysql"
 	"tiktok-demo/dao/redis"
 	"tiktok-demo/logger"
 	"time"
 )
 
+const (
+	chanCount   = 10
+	bufferCount = 1024
+)
+
 // FavoriteConsumerGroup 点赞相关的消费者
 type FavoriteConsumerGroup struct {
 	Consumer sarama.ConsumerGroup
-	Topics   string
+}
+
+func NewFavoriteConsumerGroup() *FavoriteConsumerGroup {
+	f := &FavoriteConsumerGroup{
+		Consumer: newConsumerGroup(strings.Split(conf.Config.KafkaConfig.EndPoint, ","), FavoriteGroupId),
+	}
+
+	if f.Consumer == nil {
+		return nil
+	}
+
+	return f
 }
 
 func (f *FavoriteConsumerGroup) StartConsume(ctx context.Context, topics string) {
@@ -42,28 +59,51 @@ func (f *FavoriteConsumerGroup) StartConsume(ctx context.Context, topics string)
 var handler FavoriteConsumerGroupHandler
 
 type FavoriteConsumerGroupHandler struct {
+	waiter   sync.WaitGroup
+	msgsChan []chan *sarama.ConsumerMessage
 }
 
-func (FavoriteConsumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error {
+func (f *FavoriteConsumerGroupHandler) Setup(session sarama.ConsumerGroupSession) error {
+	handler.msgsChan = make([]chan *sarama.ConsumerMessage, chanCount)
+	for i := 0; i < chanCount; i++ {
+		ch := make(chan *sarama.ConsumerMessage, bufferCount)
+		f.msgsChan[i] = ch
+		f.waiter.Add(1)
+		go f.consume(session, ch)
+	}
 	return nil
 }
 
-func (FavoriteConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
+func (f *FavoriteConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error {
+	f.msgsChan = nil
 	return nil
 }
 
-func (FavoriteConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (f *FavoriteConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// 获取消息
 	for {
 		select {
 		case msg := <-claim.Messages():
-			if err := processFavoriteMessage(msg); err != nil {
+			key, err := strconv.Atoi(string(msg.Key))
+			if err != nil {
+				logger.Log.Error("msg.Key format is not correct")
 				continue
 			}
-			session.MarkMessage(msg, "")
+			f.msgsChan[key%chanCount] <- msg
 		case <-session.Context().Done():
 			return nil
 		}
+	}
+}
+
+func (f *FavoriteConsumerGroupHandler) consume(session sarama.ConsumerGroupSession, ch chan *sarama.ConsumerMessage) {
+	defer f.waiter.Done()
+	for {
+		msg, _ := <-ch
+		if err := processFavoriteMessage(msg); err != nil {
+			continue
+		}
+		session.MarkMessage(msg, "")
 	}
 }
 
