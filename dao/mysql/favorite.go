@@ -36,8 +36,16 @@ func GetFavoriteVideoIdList(userId int) ([]int, error) {
 	if err := db.Table("favorites").Where("user_id=? AND is_favorite=?", userId, 1).Pluck("video_id", &favoriteVideoIdList).Error; err != nil {
 		return nil, err
 	}
-
 	return favoriteVideoIdList, nil
+}
+
+// GetAllFavoriteRelationList 获取所有用户点赞视频
+func GetAllFavoriteRelationList() ([]Favorite, error) {
+	var allFavorites []Favorite
+	if err := db.Table("favorites").Where("is_favorite=?", 1).Find(&allFavorites).Error; err != nil {
+		return nil, err
+	}
+	return allFavorites, nil
 }
 
 // GetVideoDetail 获取视频详细信息

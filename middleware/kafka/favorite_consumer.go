@@ -161,7 +161,7 @@ func procDelFavoriteMessage(c context.Context, userId, videoId int) (err error) 
 	}
 	err = redis.DecrVideoFavoriteCount(c, videoId)
 	if err != nil {
-		_ = redis.AddFavorite(c, userId, videoId) // 保持一致性
+		_ = redis.AddFavorite(c, userId, []interface{}{videoId}) // 保持一致性
 		_ = mysql.UpdateFavorite(relation, mysql.FAVORITED)
 		return errors.New("redis.DecrVideoFavoriteCount 视频点赞数-1失败")
 	}
@@ -193,7 +193,7 @@ func procAddFavoriteMessage(c context.Context, userId, videoId int) (err error) 
 		// 如果有关系，后续不需要操作，直接返回
 		return
 	}
-	err = redis.AddFavorite(c, userId, videoId)
+	err = redis.AddFavorite(c, userId, []interface{}{videoId})
 	if err != nil {
 		return errors.New("redis.AddFavorite 点赞操作失败")
 	}
