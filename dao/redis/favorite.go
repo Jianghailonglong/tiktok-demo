@@ -9,9 +9,9 @@ import (
 )
 
 // AddFavorite 点赞
-func AddFavorite(ctx context.Context, userId int, videoId int) error {
+func AddFavorite(ctx context.Context, userId int, videoId []interface{}) error {
 	key := KeyFavoriteUserIdPrefix + strconv.Itoa(userId)
-	_, err := client.SAdd(ctx, key, videoId).Result()
+	_, err := client.SAdd(ctx, key, videoId...).Result()
 	if err != nil {
 		logger.Log.Error("client.SAdd(ctx, key, videoId) failed", zap.Any("error", err))
 		return err

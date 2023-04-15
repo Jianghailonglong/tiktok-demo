@@ -17,6 +17,7 @@ require (
 	github.com/huandu/go-clone v1.4.1
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/sony/sonyflake v1.1.0
 	github.com/spf13/viper v1.15.0
 	go.uber.org/zap v1.21.0

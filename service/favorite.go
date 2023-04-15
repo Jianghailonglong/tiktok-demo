@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 	"strconv"
 	"sync"
@@ -24,6 +25,40 @@ const (
 
 type FavoriteLogic struct {
 	batcher *batcher.Batcher
+}
+
+func init() {
+	c := cron.New()
+	// 每天3点定时刷新0 3 * * *
+	_, err := c.AddFunc("0 3 * * *", func() {
+		allFavorites, err := mysql.GetAllFavoriteRelationList()
+		if err != nil {
+			logger.Log.Error("mysql.GetAllFavoriteRelationList failed", zap.Any("error", err))
+			return
+		}
+		videoIdCnt := make(map[int]int, 0)
+		ctx := context.Background()
+		for _, fav := range allFavorites {
+			videoIdCnt[fav.VideoId]++
+			err = redis.AddFavorite(ctx, fav.UserId, []interface{}{fav.VideoId})
+			if err != nil {
+				logger.Log.Error("redis.AddFavorite failed", zap.Any("error", err))
+				return
+			}
+		}
+		for videoId, cnt := range videoIdCnt {
+			err := redis.SetVideoFavoriteCount(ctx, videoId, cnt)
+			if err != nil {
+				logger.Log.Error("redis.SetVideoFavoriteCount failed", zap.Any("error", err))
+				return
+			}
+		}
+	})
+	if err != nil {
+		logger.Log.Error("cron.AddFunc failed", zap.Any("error", err))
+		return
+	}
+	c.Start()
 }
 
 func NewFavoriteLogic() *FavoriteLogic {
@@ -90,7 +125,12 @@ func FavoriteList(c *gin.Context, userId int) (favoriteListResponse *common.Favo
 	videoIdList, err := redis.GetFavoriteVideoList(c, userId)
 	if err != nil {
 		logger.Log.Error("redis.GetFavoriteVideoList failed")
-		return nil, err
+		// return nil, err
+	} else {
+		videoIdList, err = mysql.GetFavoriteVideoIdList(userId)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// 2）获取video详细信息
 	videoList := make([]mysql.Video, len(videoIdList))
